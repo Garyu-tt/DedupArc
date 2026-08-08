@@ -1,0 +1,43 @@
+name: Ошибка
+description: Сообщить о воспроизводимой проблеме
+title: "[Ошибка] "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Версия DedupArc
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Версия Windows
+      placeholder: Windows 11 24H2 x64
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      description: Короткая последовательность действий до появления ошибки.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Что произошло
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Дополнительная информация
+      description: Скриншоты, размер архива, тип данных и другие детали, если они помогают.

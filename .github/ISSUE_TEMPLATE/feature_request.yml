@@ -1,0 +1,22 @@
+name: Предложение
+description: Предложить улучшение DedupArc
+title: "[Предложение] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решает предложение
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предлагаемое поведение
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Альтернативы
+      description: Необязательно. Что уже пробовали или рассматривали.

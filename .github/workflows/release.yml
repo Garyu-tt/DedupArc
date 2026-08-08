@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@v4
+
+      - name: Настроить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Проверить ключ подписи
+        shell: pwsh
+        env:
+          DEDUPARC_RELEASE_KEY: ${{ secrets.DEDUPARC_RELEASE_KEY }}
+        run: |
+          if (-not $env:DEDUPARC_RELEASE_KEY) {
+            throw 'Не настроен secret DEDUPARC_RELEASE_KEY.'
+          }
+
+      - name: Собрать release
+        shell: pwsh
+        env:
+          DEDUPARC_RELEASE_KEY: ${{ secrets.DEDUPARC_RELEASE_KEY }}
+        run: .\scripts\build-windows.ps1
+
+      - name: Проверить соответствие тега версии
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'.TrimStart('v')
+          $source = Get-Content '.\internal\version\version.go' -Raw
+          if ($source -notmatch 'Current\s*=\s*"([^"]+)"') { throw 'Не удалось определить версию из исходников.' }
+          $version = $Matches[1]
+          if ($tag -ne $version) {
+            throw "Тег v$tag не соответствует версии $version в исходниках."
+          }
+          "DEDUPARC_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Создать GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = "docs/RELEASE_$env:DEDUPARC_VERSION.md"
+          $args = @(
+            'release', 'create', '${{ github.ref_name }}',
+            "dist/DedupArc-$env:DEDUPARC_VERSION-Setup.exe",
+            "dist/DedupArc-update-$env:DEDUPARC_VERSION.zip",
+            'dist/update.json',
+            'dist/update.sig',
+            'dist/SHA256SUMS.txt',
+            '--title', "DedupArc $env:DEDUPARC_VERSION"
+          )
+          if (Test-Path $notes) {
+            $args += @('--notes-file', $notes)
+          } else {
+            $args += '--generate-notes'
+          }
+          gh @args

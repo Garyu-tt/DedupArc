@@ -1,0 +1,20 @@
+/build/
+/.build/
+/bin/
+/dist/
+*.darc
+*.exe
+*.dll
+*.obj
+*.exp
+*.lib
+*.test
+.DS_Store
+
+/cmd/deduparc-setup/payload/*
+!/cmd/deduparc-setup/payload/README.txt
+
+# Локальные секреты релизов
+*-release-key.txt
+.env
+.env.*

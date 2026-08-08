@@ -1,0 +1,33 @@
+name: Windows build
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@v4
+
+      - name: Настроить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Собрать и проверить
+        shell: pwsh
+        run: .\scripts\build-windows.ps1
+
+      - name: Сохранить сборку
+        uses: actions/upload-artifact@v4
+        with:
+          name: DedupArc-windows-amd64
+          path: |
+            dist/DedupArc-*-Setup.exe
+            dist/DedupArc-update-*.zip
+          if-no-files-found: error
