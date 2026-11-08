@@ -11,7 +11,7 @@
 <p align="center">
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows">
   <img alt="Go 1.23+" src="https://img.shields.io/badge/Go-1.23%2B-00ADD8?logo=go">
-  <img alt="MIT" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="GPLv3" src="https://img.shields.io/badge/license-GPLv3-red">
 </p>
 
 DedupArc выглядит и ведёт себя как обычный архиватор: `.darc` открывается двойным щелчком, содержимое просматривается через привычный файловый интерфейс, а создание, распаковка и проверка доступны из Проводника.
@@ -135,4 +135,4 @@ DedupArc использует 7-Zip File Manager как файловый инт�
 
 ## Лицензия
 
-Код DedupArc распространяется по MIT License.
+Оригинальный код DedupArc распространяется по GNU GPLv3 или более поздней версии (`GPL-3.0-or-later`). См. [LICENSE](LICENSE) и [AUTHORS.md](AUTHORS.md). Более ранние версии, опубликованные под MIT, сохраняют прежние разрешения.
