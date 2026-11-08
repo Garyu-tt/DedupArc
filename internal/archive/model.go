@@ -34,6 +34,7 @@ const (
 	CompressionFast     CompressionMode = "fast"
 	CompressionBalanced CompressionMode = "balanced"
 	CompressionMaximum  CompressionMode = "maximum"
+	CompressionExtreme  CompressionMode = "extreme"
 )
 
 type CompressionInfo struct {
@@ -66,6 +67,7 @@ type Stats struct {
 	UniqueChunks        int   `json:"unique_chunks"`
 	SmallFiles          int   `json:"small_files,omitempty"`
 	SmallPacks          int   `json:"small_packs,omitempty"`
+	DeltaChunks         int   `json:"delta_chunks,omitempty"`
 	SourceBytes         int64 `json:"source_bytes"`
 	UniqueRawBytes      int64 `json:"unique_raw_bytes"`
 	StoredBytes         int64 `json:"stored_bytes"`

@@ -78,6 +78,7 @@ type writer struct {
 	smallPacks         map[string]*smallPack
 	resolvedSmall      map[[32]byte]PackedRef
 	pendingSmall       map[[32]byte]*pendingSmallObject
+	deltaMatcher       *deltaMatcher
 }
 
 func Create(output string, inputs []string, options CreateOptions) (CreateResult, error) {
@@ -146,7 +147,7 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 		pendingSmall:       make(map[[32]byte]*pendingSmallObject),
 		manifest: Manifest{
 			Format:    "deduparc",
-			Version:   2,
+			Version:   archiveVersion(options.Compression),
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
 			Chunker:   chunkerInfo(options.Chunker),
 			Compression: CompressionInfo{
@@ -155,6 +156,9 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 				SmallPackTarget:    options.SmallPackTarget,
 			},
 		},
+	}
+	if options.Compression == CompressionExtreme {
+		w.deltaMatcher = newDeltaMatcher()
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
 
@@ -238,7 +242,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -254,7 +258,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum:
+		case CompressionMaximum, CompressionExtreme:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -275,11 +279,18 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 	return options
 }
 
+func archiveVersion(mode CompressionMode) int {
+	if mode == CompressionExtreme {
+		return 3
+	}
+	return 2
+}
+
 func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum:
+	case CompressionMaximum, CompressionExtreme:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -538,6 +549,18 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 	method, packed, err := compressBlock(data, level, entropySkip || w.compression == CompressionFast)
 	if err != nil {
 		return err
+	}
+	if w.deltaMatcher != nil {
+		deltaMethod, deltaPacked, ok, err := w.deltaMatcher.try(data, len(packed))
+		if err != nil {
+			return err
+		}
+		if ok {
+			method, packed = deltaMethod, deltaPacked
+			w.manifest.Stats.DeltaChunks++
+		} else {
+			w.deltaMatcher.offer(digest, data)
+		}
 	}
 	w.manifest.Stats.StoredBytes += int64(len(packed))
 	return writeChunkRecord(w.out, digest, uint32(len(data)), method, packed)
