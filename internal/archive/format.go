@@ -11,9 +11,10 @@ var (
 )
 
 const (
-	methodRaw  byte = 0
-	methodZlib byte = 1
-	footerSize      = 4 + 8 + 32
+	methodRaw       byte = 0
+	methodZlib      byte = 1
+	methodDeltaZlib byte = 2
+	footerSize           = 4 + 8 + 32
 
 	defaultSmallFileThreshold = 256 * 1024
 	defaultSmallPackTarget    = 16 * 1024 * 1024

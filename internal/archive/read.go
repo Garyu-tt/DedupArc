@@ -77,7 +77,7 @@ func Open(path string) (*Reader, error) {
 	if err != nil {
 		return fail(err)
 	}
-	chunks, err := scanChunkIndex(f, manifestOffset)
+	chunks, err := scanChunkIndex(f, manifestOffset, manifest.Version)
 	if err != nil {
 		return fail(err)
 	}
@@ -156,13 +156,13 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 	return manifest, nil
 }
 
-func scanChunkIndex(f *os.File, manifestOffset int64) (map[string]chunkRecord, error) {
+func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]chunkRecord, error) {
 	chunks := make(map[string]chunkRecord)
 	offset := int64(len(fileMagic))
 	for offset < manifestOffset {
@@ -177,6 +177,12 @@ func scanChunkIndex(f *os.File, manifestOffset int64) (map[string]chunkRecord, e
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version == 3) {
+			return nil, ErrInvalidArchive
+		}
+		if method == methodDeltaZlib && (packedSize < 33 || rawSize < deltaMinSize || rawSize > deltaMaxSize || packedSize > deltaMaxSize+32) {
+			return nil, ErrInvalidArchive
+		}
 		dataOffset := offset + int64(len(header))
 		next := dataOffset + int64(packedSize)
 		if next > manifestOffset || next < dataOffset {
@@ -209,9 +215,31 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := unpackData(record.Method, packed, record.RawSize)
-	if err != nil {
-		return nil, err
+	var data []byte
+	var err error
+	if record.Method == methodDeltaZlib {
+		baseHash := hex.EncodeToString(packed[:32])
+		base, exists := r.chunks[baseHash]
+		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || base.Method == methodDeltaZlib {
+			return nil, fmt.Errorf("неверная ссылка на базовый блок для %s", hash)
+		}
+		var reference []byte
+		reference, err = r.readChunk(baseHash)
+		if err != nil {
+			return nil, err
+		}
+		data, err = unpackData(methodZlib, packed[32:], record.RawSize)
+		if err != nil {
+			return nil, err
+		}
+		for i := range data {
+			data[i] ^= reference[i]
+		}
+	} else {
+		data, err = unpackData(record.Method, packed, record.RawSize)
+		if err != nil {
+			return nil, err
+		}
 	}
 	digest := sha256.Sum256(data)
 	if hex.EncodeToString(digest[:]) != hash {
