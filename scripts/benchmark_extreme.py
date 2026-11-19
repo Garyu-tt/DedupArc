@@ -53,6 +53,24 @@ def corpus(root, category, scale):
             at = rng.randrange(len(patched))
             patched[at] ^= rng.randint(1, 255)
         (root / "affine-patched.bin").write_bytes(patched)
+    elif category == "matrix":
+        # Matrix data with a non-periodic 128-byte column basis and
+        # per-row quadratic coefficients modulo 256. The column basis
+        # is deliberately random: traditional R02 formula patterns
+        # cannot simply repeat a 32-byte periodic template.
+        width, rows = 128, 4096 * scale
+        for variant in range(4):
+            basis = rng.randbytes(width)
+            data = bytearray(rows*width)
+            for row in range(rows):
+                offset = (variant * 17 + row*11 + 5*(row*(row-1)//2)) & 255
+                start = row*width
+                for col in range(width):
+                    data[start+col] = (basis[col] + offset) & 255
+            for _ in range(30 + variant*10):
+                pos = width + rng.randrange(len(data)-width)
+                data[pos] ^= rng.randint(1,255)
+            (root / f"matrix-{variant:02}.bin").write_bytes(data)
     elif category == "source-tree":
         # Real, versioned source-code snapshot from this Git checkout.
         # Avoid ephemeral build outputs and vendored/binary files.
@@ -110,7 +128,7 @@ def benchmark(binary, directory, category, scale):
     expected = {p.relative_to(source).as_posix():digest(p) for p in files}
     report = {"category":category,"files":len(files),"source_bytes":raw,
               "codecs":{},"sha256_roundtrip":"PASS"}
-    for mode in ("maximum","extreme","neutron","neutron-dag","neutron-dense"):
+    for mode in ("maximum","extreme","neutron","neutron-dag","neutron-dense","neutron-rmg"):
         dest = directory / f"{category}-{mode}.darc"
         took = run([str(binary),"create","--"+mode,str(dest),str(source)])
         run([str(binary),"verify",str(dest)])
@@ -154,10 +172,10 @@ def main():
     if workdir.exists(): ap.error("workdir already exists: use a fresh directory")
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
-            "methods":"DedupArc maximum/extreme/neutron/neutron-dag/neutron-dense, tar.xz -9, tar.zstd -19",
+            "methods":"DedupArc maximum/extreme/neutron/neutron-dag/neutron-dense/neutron-rmg, tar.xz -9, tar.zstd -19",
             "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, quadratic for v6-only integer polynomials, source-tree for this checkout's real files, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
-    for name in ("versioned","random","text","math","shared-math","quadratic","source-tree"):
+    for name in ("versioned","random","text","math","shared-math","quadratic","matrix","source-tree"):
         result=benchmark(binary,workdir,name,args.scale)
         report["datasets"].append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
