@@ -49,10 +49,8 @@ func samples() map[string][]byte {
  nestedShifts:=patterned(16,16,114,0)
  nested:=make([]byte,1024*256)
  for row:=0;row<256;row++ {for col:=0;col<1024;col++ {nested[row*1024+col]=nestedBase[col]+nestedShifts[row]}}
- repeated:=bytes.Repeat([]byte("constant repeatable payload entry
-"),4096)
- configs:=bytes.Repeat([]byte("{"name":"node","enabled":true,"id":42}
-"),3072)
+ repeated:=bytes.Repeat([]byte("constant repeatable payload entry\n"),4096)
+ configs:=bytes.Repeat([]byte("{\"name\":\"node\",\"enabled\":true,\"id\":42}\n"),3072)
  versions:=make([]byte,256*256);copy(versions[:256],random[:256])
  for r:=1;r<256;r++ {
   copy(versions[r*256:(r+1)*256],versions[:256])
