@@ -10,8 +10,8 @@ import (
 )
 
 // An optional v6 manifest serialization: pack only inline-file metadata into
-// a length-delimited binary table. The entire manifest is still SHA-256
-// authenticated and compressed by MNF2, and public Manifest stays unchanged.
+// a length-delimited binary table. The entire manifest is still SHA-256 integrity-checked (not signed)
+// and compressed by MNF2, and public Manifest stays unchanged.
 // Always choose it only if it actually reduces the stored manifest.
 const inlineTableMaxFiles = 1_000_000
 
