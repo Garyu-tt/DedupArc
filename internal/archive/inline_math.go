@@ -33,6 +33,8 @@ func isPureMathCode(code []byte) bool {
 		offset = 2
 	case mathAffine:
 		offset = 3
+	case mathQuadratic:
+		offset = 4
 	case mathPeriodic:
 		if len(code) < 3 { return false }
 		offset = 2 + int(code[1])
@@ -56,14 +58,14 @@ func (w *writer) tryInlineMathFile(item sourceEntry) (bool, error) {
 	if int64(len(data)) != item.size {
 		return false, fmt.Errorf("%s: size changed during reading", item.storedPath)
 	}
-	if _, ok := mathTry(data[:min(len(data), 4096)], 256); !ok {
+	if _, ok := mathTryDense(data[:min(len(data), 4096)], 256); !ok {
 		return false, nil
 	}
 
 	// Reuse an existing clean mathematical root if the exact patch stream
 	// is small. Root indices are logical manifest indices (not CHNK ordinals).
 	refCode, hasRef := w.inlineMatcher.try(data, inlineMathMaxCode)
-	mathCode, hasPure := mathTry(data, inlineMathMaxCode)
+	mathCode, hasPure := mathTryDense(data, inlineMathMaxCode)
 	hasPure = hasPure && isPureMathCode(mathCode) &&
 		len(w.manifest.MathRoots) < inlineMathMaxRoots
 
