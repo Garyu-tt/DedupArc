@@ -84,3 +84,20 @@ func FuzzMathCodec(f *testing.F) {
 		if err != nil || !bytes.Equal(out, data) { t.Fatalf("roundtrip error: %v", err) }
 	})
 }
+
+func TestNeutronArchiveDensityVsMaximum(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "formula.bin")
+	data := make([]byte, 256*1024)
+	for i := range data { data[i] = byte(31 + i*11) }
+	if err := os.WriteFile(source,data,0600);err!=nil {t.Fatal(err)}
+	maximum,err:=Create(filepath.Join(dir,"maximum.darc"),[]string{source},CreateOptions{Compression:CompressionMaximum})
+	if err!=nil {t.Fatal(err)}
+	neutron,err:=Create(filepath.Join(dir,"neutron.darc"),[]string{source},CreateOptions{Compression:CompressionNeutron})
+	if err!=nil {t.Fatal(err)}
+	if neutron.Bytes>=maximum.Bytes {
+		t.Fatalf("neutron archive %d bytes is not smaller than maximum %d",neutron.Bytes,maximum.Bytes)
+	}
+	if neutron.Manifest.Stats.MathChunks==0 {t.Fatal("no mathematical block")}
+	t.Logf("whole-archive bytes: maximum=%d, neutron=%d, source=%d",maximum.Bytes,neutron.Bytes,len(data))
+}
