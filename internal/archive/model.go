@@ -10,6 +10,7 @@ type Manifest struct {
 	Compression CompressionInfo `json:"compression,omitempty"`
 	Entries     []Entry         `json:"entries"`
 	MathRoots   []InlineMathRoot `json:"math_roots,omitempty"`
+	InlineTable []byte          `json:"inline_table,omitempty"`
 	Stats       Stats           `json:"stats"`
 }
 
