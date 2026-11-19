@@ -159,7 +159,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4 && manifest.Version != 5 && manifest.Version != 6) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4 && manifest.Version != 5 && manifest.Version != 6 && manifest.Version != 7) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 
@@ -173,7 +173,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 		return Manifest{}, ErrInvalidArchive
 	}
 	for _, root := range manifest.MathRoots {
-		if manifest.Version != 6 || root.Size < inlineMathMinRaw ||
+		if (manifest.Version != 6 && manifest.Version != 7) || root.Size < inlineMathMinRaw ||
 			root.Size > inlineMathMaxRaw || len(root.Code) < 3 ||
 			len(root.Code) > inlineMathMaxCode || !isPureMathCode(root.Code) {
 			return Manifest{}, ErrInvalidArchive
@@ -181,7 +181,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	}
 	for _, entry := range manifest.Entries {
 		if len(entry.InlineMath) == 0 { continue }
-		if manifest.Version != 6 || entry.Type != "file" ||
+		if (manifest.Version != 6 && manifest.Version != 7) || entry.Type != "file" ||
 			entry.Size < inlineMathMinRaw || entry.Size > inlineMathMaxRaw ||
 			len(entry.InlineMath) > inlineMathMaxCode ||
 			entry.Packed != nil || len(entry.Chunks) != 0 ||
@@ -213,10 +213,13 @@ func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]c
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
-		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version >= 4) && !(method == methodMathRef && version >= 5) {
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version >= 4) && !(method == methodMathRef && version >= 5) && !(method == methodRMG && version == 7) {
 			return nil, nil, ErrInvalidArchive
 		}
 		if method == methodMath && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 3 || packedSize >= rawSize) {
+			return nil, nil, ErrInvalidArchive
+		}
+		if method == methodRMG && (rawSize < rmgMinRaw || rawSize > rmgMaxRaw || packedSize < 8 || packedSize >= rawSize) {
 			return nil, nil, ErrInvalidArchive
 		}
 		if method == methodMathRef && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 2 || packedSize >= rawSize) {
@@ -317,6 +320,8 @@ func unpackData(method byte, packed []byte, rawSize uint32) ([]byte, error) {
 		data = append([]byte(nil), packed...)
 	case methodMath:
 		return mathDecode(packed, rawSize)
+	case methodRMG:
+		return rmgDecode(packed,rawSize)
 	case methodZlib:
 		zr, err := zlib.NewReader(bytes.NewReader(packed))
 		if err != nil {
