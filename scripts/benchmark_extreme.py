@@ -81,7 +81,7 @@ def benchmark(binary, directory, category, scale):
     expected = {p.relative_to(source).as_posix():digest(p) for p in files}
     report = {"category":category,"files":len(files),"source_bytes":raw,
               "codecs":{},"sha256_roundtrip":"PASS"}
-    for mode in ("maximum","extreme","neutron","neutron-dag"):
+    for mode in ("maximum","extreme","neutron","neutron-dag","neutron-dense"):
         dest = directory / f"{category}-{mode}.darc"
         took = run([str(binary),"create","--"+mode,str(dest),str(source)])
         run([str(binary),"verify",str(dest)])
@@ -125,7 +125,7 @@ def main():
     if workdir.exists(): ap.error("workdir already exists: use a fresh directory")
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
-            "methods":"DedupArc maximum/extreme/neutron/neutron-dag, tar.xz -9, tar.zstd -19",
+            "methods":"DedupArc maximum/extreme/neutron/neutron-dag/neutron-dense, tar.xz -9, tar.zstd -19",
             "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
     for name in ("versioned","random","text","math","shared-math"):
