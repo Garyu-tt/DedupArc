@@ -836,7 +836,7 @@ var executableSmallExtensions = map[string]struct{}{
 
 func encodeManifestV2(manifest *Manifest) (raw []byte, method byte, packed []byte, err error) {
 	for i := 0; i < 4; i++ {
-		raw, err = json.Marshal(manifest)
+		raw, err = marshalManifestV6(manifest)
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -857,7 +857,7 @@ func encodeManifestV2(manifest *Manifest) (raw []byte, method byte, packed []byt
 		manifest.Stats.ManifestRawBytes = rawSize
 		manifest.Stats.ManifestStoredBytes = storedSize
 	}
-	raw, err = json.Marshal(manifest)
+	raw, err = marshalManifestV6(manifest)
 	if err != nil {
 		return nil, 0, nil, err
 	}
