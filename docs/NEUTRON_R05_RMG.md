@@ -78,6 +78,34 @@ references, model parameters, residuals and decoder format requirements.
 Only a decoder already installed or included with the archive is usable:
 external model/code dependencies must not be counted as free storage.
 
+## Verified results (2026-11-19)
+
+[Linux full-archive CI and SHA-256 evidence](https://github.com/Garyu-tt/DedupArc/actions/runs/44490558380)
+ran `go test ./...`, `go vet ./...`, RMG exactness/corruption
+tests, and verified every extracted tree by SHA-256.
+
+| Corpus | Raw bytes | R04 v6 | R05 v7 | tar.zstd -19 |
+| --- | ---: | ---: | ---: | ---: |
+| Matrix predictor test | 2,097,152 | 1,120,926 B | **1,983 B** | 135,605 B |
+| Math sequences | 8,388,608 | 1,251 B | 1,252 B | 1,779 B |
+| Shared math roots | 4,194,304 | 1,064 B | 1,064 B | **913 B** |
+| Quadratic | 4,194,304 | 951 B | 952 B | 1,928 B |
+| Versioned binaries | 41,943,040 | 4,253,367 B | 4,253,369 B | **4,206,586 B** |
+| Random | 4,194,304 | 4,196,175 B | 4,196,175 B | **4,194,933 B** |
+| Text configs | 1,837,782 | 24,822 B | 24,824 B | **22,624 B** |
+| Real repo source tree | 256,454 (67 files) | 74,462 B | 74,464 B | **65,082 B** |
+
+One fixed-size matrix file unit test reports 524,288 B original,
+280,617 B in R04, and **835 B in R05**, including all archive overhead.
+
+**Interpretation:** The structured matrix corpus is deliberately an
+extreme favorable case with a noisy 128-byte column vector and a
+quadratic row-offset sequence. Its R05 archive is roughly 565x
+smaller than R04 and ~68x smaller than Zstandard. This does not
+generalize to training weights, images, random data or arbitrary
+matrices. The source-tree control is worse than Zstandard and XZ:
+R05 does not yet improve ordinary code compression.
+
 ## Reproducibility
 
 ```sh
