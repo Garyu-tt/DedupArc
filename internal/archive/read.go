@@ -232,7 +232,7 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 	if record.Method == methodDeltaZlib {
 		baseHash := hex.EncodeToString(packed[:32])
 		base, exists := r.chunks[baseHash]
-		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || base.Method == methodDeltaZlib {
+		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || (base.Method == methodDeltaZlib || base.Method == methodMathRef) {
 			return nil, fmt.Errorf("неверная ссылка на базовый блок для %s", hash)
 		}
 		var reference []byte
