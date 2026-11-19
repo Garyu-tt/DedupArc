@@ -163,6 +163,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 
+	if err:=expandInlineTable(&manifest);err!=nil{return Manifest{},err}
 	// Inline mathematical references are only legal in v6, and cannot
 	// coexist with CHNK or PACK links in the same entry.
 	if manifest.Version < 6 && len(manifest.MathRoots) > 0 {
