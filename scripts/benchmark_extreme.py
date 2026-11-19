@@ -53,6 +53,19 @@ def corpus(root, category, scale):
             at = rng.randrange(len(patched))
             patched[at] ^= rng.randint(1, 255)
         (root / "affine-patched.bin").write_bytes(patched)
+    elif category == "shared-math":
+        # Distinct files share an exactly regenerable periodic root with sparse edits.
+        # Kept separate from the R02 'math' set to measure cross-file references.
+        length = 512 * 1024 * scale
+        pattern = b"deduparc-neutron-dag-period-31!"
+        root_data = bytes(pattern[i % len(pattern)] for i in range(length))
+        for n in range(8):
+            data = bytearray(root_data)
+            for j in range(2*n):
+                pos = 1024 + j * 17011
+                if pos < length:
+                    data[pos] ^= (11+n+j)&255
+            (root / f"formula-{n:02}.bin").write_bytes(data)
     return sorted(p for p in root.rglob("*") if p.is_file())
 
 def run(args, stdout=None):
@@ -113,9 +126,9 @@ def main():
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
             "methods":"DedupArc maximum/extreme/neutron/neutron-dag, tar.xz -9, tar.zstd -19",
-            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
+            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
-    for name in ("versioned","random","text","math"):
+    for name in ("versioned","random","text","math","shared-math"):
         result=benchmark(binary,workdir,name,args.scale)
         report["datasets"].append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
