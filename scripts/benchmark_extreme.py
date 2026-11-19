@@ -53,6 +53,19 @@ def corpus(root, category, scale):
             at = rng.randrange(len(patched))
             patched[at] ^= rng.randint(1, 255)
         (root / "affine-patched.bin").write_bytes(patched)
+    elif category == "quadratic":
+        # Integer-only quadratic polynomial modulo 256. The period is
+        # longer than the R02 32-byte period cap.
+        length = 2 * 1024 * 1024 * scale
+        for variant, (a, b, c) in enumerate(((13, 17, 5), (91, 7, 11))):
+            data = bytearray(length)
+            for i in range(length):
+                data[i] = (a + b*i + c*(i*(i-1)//2)) & 255
+            if variant:
+                for _ in range(50*scale):
+                    at = rng.randrange(length)
+                    data[at] ^= rng.randint(1,255)
+            (root / f"quadratic-{variant}.bin").write_bytes(data)
     elif category == "shared-math":
         # Distinct files share an exactly regenerable periodic root with sparse edits.
         # Kept separate from the R02 'math' set to measure cross-file references.
@@ -126,9 +139,9 @@ def main():
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
             "methods":"DedupArc maximum/extreme/neutron/neutron-dag/neutron-dense, tar.xz -9, tar.zstd -19",
-            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
+            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, quadratic for v6-only integer polynomials, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
-    for name in ("versioned","random","text","math","shared-math"):
+    for name in ("versioned","random","text","math","shared-math","quadratic"):
         result=benchmark(binary,workdir,name,args.scale)
         report["datasets"].append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
