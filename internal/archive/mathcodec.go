@@ -83,6 +83,8 @@ func mathTry(data []byte, maxBytes int) ([]byte, bool) {
 
 	var best []byte
 	for _,p:=range plans {
+		// A patch requires at least two bytes, so near-random samples are poor candidates.
+		if p.estimated > sample/2 { continue }
 		// A cheap heuristic only; the complete source is checked losslessly below.
 		if p.estimated*2*len(data)/sample > maxBytes*2 { continue }
 		prefix:=[]byte{p.op}
