@@ -53,6 +53,22 @@ def corpus(root, category, scale):
             at = rng.randrange(len(patched))
             patched[at] ^= rng.randint(1, 255)
         (root / "affine-patched.bin").write_bytes(patched)
+    elif category == "source-tree":
+        # Real, versioned source-code snapshot from this Git checkout.
+        # Avoid ephemeral build outputs and vendored/binary files.
+        checkout = Path(__file__).resolve().parents[1]
+        allowed = {".go", ".md", ".txt", ".py", ".yml", ".yaml", ".mod", ".ps1", ".json"}
+        selected = []
+        for section in ("internal", "cmd", "scripts", "docs", ".github"):
+            for p in (checkout / section).rglob("*"):
+                if p.is_file() and p.suffix in allowed and p.stat().st_size <= 4*1024*1024:
+                    selected.append(p)
+        selected.sort()
+        for p in selected:
+            dst = root / p.relative_to(checkout)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(p, dst)
+        shutil.copyfile(checkout / "README.md", root / "README.md")
     elif category == "quadratic":
         # Integer-only quadratic polynomial modulo 256. The period is
         # longer than the R02 32-byte period cap.
@@ -139,9 +155,9 @@ def main():
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
             "methods":"DedupArc maximum/extreme/neutron/neutron-dag/neutron-dense, tar.xz -9, tar.zstd -19",
-            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, quadratic for v6-only integer polynomials, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
+            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, shared-math for cross-file formulas, quadratic for v6-only integer polynomials, source-tree for this checkout's real files, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
-    for name in ("versioned","random","text","math","shared-math","quadratic"):
+    for name in ("versioned","random","text","math","shared-math","quadratic","source-tree"):
         result=benchmark(binary,workdir,name,args.scale)
         report["datasets"].append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
