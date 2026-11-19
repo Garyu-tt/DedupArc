@@ -82,16 +82,16 @@ N bytes   zlib( XOR(данные_нового_блока, данные_базо�
 
 ## Математические блоки в версии 4 (Neutron R02)
 
-Режим \`create --neutron\` может использовать метод 3. Длина исходного блока
-уже известна из поля \`CHNK.rawSize\`; байт-код описывает генератор и
+Режим `create --neutron` может использовать метод 3. Длина исходного блока
+уже известна из поля `CHNK.rawSize`; байт-код описывает генератор и
 отсортированные точные исключения:
 
-\`\`\`text
+```text
 1 byte   opcode: A0=constant; A1=affine mod 256; A2=periodic
 params   A0: value; A1: start,step; A2: period(1..32), period-bytes
 uvarint  number of patches
 repeat   uvarint gap from previous patch end, 1 byte exact replacement
-\`\`\`
+```
 
 Начальный previous patch end = 0, после замены на индексе i становится i+1.
 Дубликаты позиций, превышение исходной длины, переполнение varint,
