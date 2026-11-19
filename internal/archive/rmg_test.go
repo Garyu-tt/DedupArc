@@ -59,7 +59,7 @@ func TestRMGMalformedStreams(t *testing.T) {
         {0xff,0},
         good[:3],
         append(bytes.Clone(good),0),
-        append([]byte{rmgWireVersion,0x80},good[2:]...),
+        append([]byte{rmgWireVersion,17},good[3:]...), // width 17 is not a power of two
     }
     for _,code:=range bad {
         if _,err:=rmgDecode(code,uint32(len(data)));err==nil{
