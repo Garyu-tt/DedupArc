@@ -65,6 +65,34 @@ A3 in legacy-v4/v5 physical math chunks.
 This is useful for integer sequences, deterministic synthetic data and some
 structured numeric arrays. It does not help arbitrary/random data.
 
+## Measured outcomes (Linux CI, 2026-11-19)
+
+[Seven-corpus reproducible validation](https://github.com/Garyu-tt/DedupArc/actions/runs/44488215672)
+passed `go test ./...`, `go vet ./...`, dedicated v6 mathematical
+and archive tests, and SHA-256 roundtrip checks on all seven data sets.
+The *source-tree* corpus is real text from the pinned DedupArc checkout;
+the other six are explicitly synthetic.
+
+| Corpus | Original | R03 v5 | R04 v6 | tar.zstd -19 |
+| --- | ---: | ---: | ---: | ---: |
+| Mathematical | 8,388,608 B | 1,546 B | **1,251 B** | 1,796 B |
+| Shared math roots | 4,194,304 B | 1,660 B | **1,066 B** | **887 B** |
+| Quadratic | 4,194,304 B | 16,575 B | **955 B** | 1,941 B |
+| Versioned binaries | 41,943,040 B | 4,253,369 B | 4,253,369 B | 4,206,651 B |
+| Random | 4,194,304 B | 4,196,174 B | 4,196,175 B | 4,194,933 B |
+| Repeated text | 1,837,782 B | 24,820 B | 24,818 B | 22,699 B |
+| Real DedupArc source tree | 236,809 B (63 files) | 68,396 B | 68,397 B | **59,925 B** |
+
+The source-tree negative control is important: **R04 does not beat
+Zstandard or XZ on ordinary source code** (XZ -9 was 58,264 B).
+Quad data is deliberately constructed for polynomial coding, and repeated
+patterns are not representative of arbitrary files.
+
+R04 cuts the quadratic corpus by ~17.36x vs R03 and has full-archive
+source-to-output ratio ~4391.94x there. The 8 MiB mathematical corpus
+reaches ~6705x, but random data are not losslessly compressible
+in general.
+
 ## Compatibility
 
 | Mode | Writer manifest |
