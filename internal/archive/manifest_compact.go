@@ -17,7 +17,7 @@ const inlineTableMaxFiles = 1_000_000
 
 func marshalManifestV6(manifest *Manifest) ([]byte,error) {
 	plain,err:=json.Marshal(manifest)
-	if err!=nil || manifest.Version!=6 {return plain,err}
+	if err!=nil || (manifest.Version!=6 && manifest.Version!=7) {return plain,err}
 	inline:=0
 	for _,e:=range manifest.Entries {if len(e.InlineMath)>0 {inline++}}
 	if inline==0 {return plain,nil}
@@ -76,7 +76,7 @@ func (c *inlineTableCursor) bytes(n uint64) ([]byte,error) {
 
 func expandInlineTable(manifest *Manifest) error {
 	if len(manifest.InlineTable)==0 {return nil}
-	if manifest.Version!=6 {return ErrInvalidArchive}
+	if manifest.Version!=6 && manifest.Version!=7 {return ErrInvalidArchive}
 	c:=inlineTableCursor{data:manifest.InlineTable}
 	count,err:=c.u()
 	if err!=nil || count>inlineTableMaxFiles || count>uint64(len(c.data)/40+1) {
