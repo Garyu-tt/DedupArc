@@ -9,6 +9,7 @@ type Manifest struct {
 	Chunker     ChunkerInfo     `json:"chunker"`
 	Compression CompressionInfo `json:"compression,omitempty"`
 	Entries     []Entry         `json:"entries"`
+	MathRoots   []InlineMathRoot `json:"math_roots,omitempty"`
 	Stats       Stats           `json:"stats"`
 }
 
@@ -37,6 +38,7 @@ const (
 	CompressionExtreme  CompressionMode = "extreme"
 	CompressionNeutron  CompressionMode = "neutron"
 	CompressionNeutronDAG CompressionMode = "neutron-dag"
+	CompressionNeutronDense CompressionMode = "neutron-dense"
 )
 
 type CompressionInfo struct {
@@ -60,6 +62,7 @@ type Entry struct {
 	SHA256       string     `json:"sha256,omitempty"`
 	Chunks       []string   `json:"chunks,omitempty"`
 	Packed       *PackedRef `json:"packed,omitempty"`
+	InlineMath   []byte     `json:"inline_math,omitempty"`
 }
 
 type Stats struct {
@@ -72,6 +75,7 @@ type Stats struct {
 	DeltaChunks         int   `json:"delta_chunks,omitempty"`
 	MathChunks          int   `json:"math_chunks,omitempty"`
 	MathRefChunks       int   `json:"math_ref_chunks,omitempty"`
+	InlineMathFiles     int   `json:"inline_math_files,omitempty"`
 	SourceBytes         int64 `json:"source_bytes"`
 	UniqueRawBytes      int64 `json:"unique_raw_bytes"`
 	StoredBytes         int64 `json:"stored_bytes"`
