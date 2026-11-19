@@ -1,0 +1,39 @@
+name: Neutron R05 RMG research
+
+on:
+  push:
+    branches:
+      - experiment/neutron-r05-recursive-matrix-genome
+  pull_request:
+    paths:
+      - 'internal/archive/**'
+      - 'cmd/deduparc/**'
+      - 'scripts/benchmark_extreme.py'
+      - '.github/workflows/neutron-r05.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Full regression tests
+        run: go test ./...
+      - name: Vet source
+        run: go vet ./...
+      - name: RMG exactness and corrupted input tests
+        run: go test -count=1 -v ./internal/archive -run 'TestRMG|TestNeutronRMG|TestNeutronR04|TestNeutronDAG|TestMath'
+      - name: Build command line
+        run: go build -o deduparc-core ./cmd/deduparc
+      - name: Benchmark eight lossless corpora
+        run: python3 scripts/benchmark_extreme.py --binary ./deduparc-core --workdir /tmp/neutron-r05-rmg
+      - name: Print full-archive measurements
+        run: cat /tmp/neutron-r05-rmg/results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neutron-r05-rmg-benchmark
+          path: /tmp/neutron-r05-rmg/results.json
