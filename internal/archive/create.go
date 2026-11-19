@@ -79,6 +79,8 @@ type writer struct {
 	resolvedSmall      map[[32]byte]PackedRef
 	pendingSmall       map[[32]byte]*pendingSmallObject
 	deltaMatcher       *deltaMatcher
+	mathRefs           *mathRefEncoder
+	chunkOrdinal       uint64
 }
 
 func Create(output string, inputs []string, options CreateOptions) (CreateResult, error) {
@@ -157,8 +159,11 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 			},
 		},
 	}
-	if options.Compression == CompressionExtreme || options.Compression == CompressionNeutron {
+	if options.Compression == CompressionExtreme || options.Compression == CompressionNeutron || options.Compression == CompressionNeutronDAG {
 		w.deltaMatcher = newDeltaMatcher()
+	}
+	if options.Compression == CompressionNeutronDAG {
+		w.mathRefs = &mathRefEncoder{}
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
 
@@ -242,7 +247,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionNeutron:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -258,7 +263,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum, CompressionExtreme, CompressionNeutron:
+		case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -280,6 +285,9 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 }
 
 func archiveVersion(mode CompressionMode) int {
+	if mode == CompressionNeutronDAG {
+		return 5
+	}
 	if mode == CompressionNeutron {
 		return 4
 	}
@@ -293,7 +301,7 @@ func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum, CompressionExtreme, CompressionNeutron:
+	case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -553,7 +561,7 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 	if err != nil {
 		return err
 	}
-	if w.compression == CompressionNeutron {
+	if w.compression == CompressionNeutron || w.compression == CompressionNeutronDAG {
 		if mathPacked, ok := mathTry(data, len(packed)-16); ok {
 			method, packed = methodMath, mathPacked
 		}
@@ -565,16 +573,34 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 		}
 		if ok {
 			method, packed = deltaMethod, deltaPacked
-			w.manifest.Stats.DeltaChunks++
-		} else {
-			w.deltaMatcher.offer(digest, data)
 		}
+	}
+	if w.mathRefs != nil {
+		if refPacked, ok := w.mathRefs.try(data, len(packed)); ok {
+			method, packed = methodMathRef, refPacked
+		}
+	}
+	if w.deltaMatcher != nil && method != methodDeltaZlib && method != methodMathRef {
+		w.deltaMatcher.offer(digest, data)
+	}
+	if method == methodDeltaZlib {
+		w.manifest.Stats.DeltaChunks++
 	}
 	if method == methodMath {
 		w.manifest.Stats.MathChunks++
 	}
+	if method == methodMathRef {
+		w.manifest.Stats.MathRefChunks++
+	}
 	w.manifest.Stats.StoredBytes += int64(len(packed))
-	return writeChunkRecord(w.out, digest, uint32(len(data)), method, packed)
+	if err := writeChunkRecord(w.out, digest, uint32(len(data)), method, packed); err != nil {
+		return err
+	}
+	if w.mathRefs != nil && method == methodMath {
+		w.mathRefs.offer(w.chunkOrdinal, data)
+	}
+	w.chunkOrdinal++
+	return nil
 }
 
 func (w *writer) notify(phase CreatePhase, currentPath string) bool {

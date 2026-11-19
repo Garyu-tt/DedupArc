@@ -18,6 +18,7 @@ type chunkRecord struct {
 	RawSize    uint32
 	PackedSize uint32
 	Method     byte
+	Ordinal    uint64
 }
 
 type packedCacheItem struct {
@@ -30,6 +31,7 @@ type Reader struct {
 	Manifest         Manifest
 	manifestOffset   int64
 	chunks           map[string]chunkRecord
+	chunkOrder       []string
 	packedCache      map[string]*list.Element
 	packedCacheLRU   *list.List
 	packedCacheBytes int64
@@ -77,7 +79,7 @@ func Open(path string) (*Reader, error) {
 	if err != nil {
 		return fail(err)
 	}
-	chunks, err := scanChunkIndex(f, manifestOffset, manifest.Version)
+	chunks, chunkOrder, err := scanChunkIndex(f, manifestOffset, manifest.Version)
 	if err != nil {
 		return fail(err)
 	}
@@ -87,6 +89,7 @@ func Open(path string) (*Reader, error) {
 		Manifest:       manifest,
 		manifestOffset: manifestOffset,
 		chunks:         chunks,
+		chunkOrder:     chunkOrder,
 		packedCache:    make(map[string]*list.Element),
 		packedCacheLRU: list.New(),
 	}, nil
@@ -156,56 +159,62 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4 && manifest.Version != 5) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 	return manifest, nil
 }
 
-func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]chunkRecord, error) {
+func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]chunkRecord, []string, error) {
 	chunks := make(map[string]chunkRecord)
+	order := make([]string, 0)
 	offset := int64(len(fileMagic))
 	for offset < manifestOffset {
 		header := make([]byte, 4+32+4+4+1)
 		if _, err := f.ReadAt(header, offset); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !bytes.Equal(header[:4], chunkMagic[:]) {
-			return nil, fmt.Errorf("повреждённая запись данных по смещению %d", offset)
+			return nil, nil, fmt.Errorf("повреждённая запись данных по смещению %d", offset)
 		}
 		hash := hex.EncodeToString(header[4:36])
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
-		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version == 4) {
-			return nil, ErrInvalidArchive
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version >= 4) && !(method == methodMathRef && version == 5) {
+			return nil, nil, ErrInvalidArchive
 		}
 		if method == methodMath && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 3 || packedSize >= rawSize) {
-			return nil, ErrInvalidArchive
+			return nil, nil, ErrInvalidArchive
+		}
+		if method == methodMathRef && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 2 || packedSize >= rawSize) {
+			return nil, nil, ErrInvalidArchive
 		}
 		if method == methodDeltaZlib && (packedSize < 33 || rawSize < deltaMinSize || rawSize > deltaMaxSize || packedSize > deltaMaxSize+32) {
-			return nil, ErrInvalidArchive
+			return nil, nil, ErrInvalidArchive
 		}
 		dataOffset := offset + int64(len(header))
 		next := dataOffset + int64(packedSize)
 		if next > manifestOffset || next < dataOffset {
-			return nil, ErrInvalidArchive
+			return nil, nil, ErrInvalidArchive
 		}
 		if _, exists := chunks[hash]; exists {
-			return nil, fmt.Errorf("дубликат физического блока %s", hash)
+			return nil, nil, fmt.Errorf("дубликат физического блока %s", hash)
 		}
 		chunks[hash] = chunkRecord{
 			Offset:     dataOffset,
 			RawSize:    rawSize,
 			PackedSize: packedSize,
 			Method:     method,
+			Ordinal:    uint64(len(order)),
 		}
+		order = append(order, hash)
 		offset = next
 	}
 	if offset != manifestOffset {
-		return nil, ErrInvalidArchive
+		return nil, nil, ErrInvalidArchive
 	}
-	return chunks, nil
+	return chunks, order, nil
 }
 
 func (r *Reader) readChunk(hash string) ([]byte, error) {
@@ -223,7 +232,7 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 	if record.Method == methodDeltaZlib {
 		baseHash := hex.EncodeToString(packed[:32])
 		base, exists := r.chunks[baseHash]
-		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || base.Method == methodDeltaZlib {
+		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || (base.Method == methodDeltaZlib || base.Method == methodMathRef) {
 			return nil, fmt.Errorf("неверная ссылка на базовый блок для %s", hash)
 		}
 		var reference []byte
@@ -237,6 +246,21 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 		}
 		for i := range data {
 			data[i] ^= reference[i]
+		}
+	} else if record.Method == methodMathRef {
+		data, err = mathRefDecode(packed, record.RawSize, func(index uint64) ([]byte, error) {
+			if index >= record.Ordinal || index >= uint64(len(r.chunkOrder)) {
+				return nil, fmt.Errorf("math reference: forward or invalid ordinal")
+			}
+			baseHash := r.chunkOrder[index]
+			base := r.chunks[baseHash]
+			if base.Method != methodMath || base.RawSize != record.RawSize || base.Offset >= record.Offset {
+				return nil, fmt.Errorf("math reference: invalid root")
+			}
+			return r.readChunk(baseHash)
+		})
+		if err != nil {
+			return nil, err
 		}
 	} else {
 		data, err = unpackData(record.Method, packed, record.RawSize)
