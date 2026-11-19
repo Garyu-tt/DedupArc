@@ -50,7 +50,7 @@ func run(args []string) error {
 
 func commandCreate(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme|--neutron|--neutron-dag|--neutron-dense] <архив.darc> <файл|каталог> [...]")
+		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme|--neutron|--neutron-dag|--neutron-dense|--neutron-rmg] <архив.darc> <файл|каталог> [...]")
 	}
 	mode := archive.CompressionBalanced
 	if strings.HasPrefix(args[0], "--") {
@@ -69,6 +69,8 @@ func commandCreate(args []string) error {
 			mode = archive.CompressionNeutronDAG
 		case "--neutron-dense":
 			mode = archive.CompressionNeutronDense
+		case "--neutron-rmg":
+			mode = archive.CompressionNeutronRMG
 		default:
 			return fmt.Errorf("неизвестный режим сжатия %q", args[0])
 		}
@@ -87,17 +89,20 @@ func commandCreate(args []string) error {
 	fmt.Printf("Создан: %s\n", output)
 	fmt.Printf("Файлов: %d, каталогов: %d\n", s.Files, s.Directories)
 	fmt.Printf("Мелких файлов объединено: %d в %d блоков\n", s.SmallFiles, s.SmallPacks)
-	if mode == archive.CompressionExtreme || mode == archive.CompressionNeutron || mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense {
+	if mode == archive.CompressionExtreme || mode == archive.CompressionNeutron || mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense || mode == archive.CompressionNeutronRMG {
 		fmt.Printf("Дельта-блоков: %d\n", s.DeltaChunks)
 	}
-	if mode == archive.CompressionNeutron || mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense {
+	if mode == archive.CompressionNeutron || mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense || mode == archive.CompressionNeutronRMG {
 		fmt.Printf("Математических блоков: %d\n", s.MathChunks)
 	}
-	if mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense {
+	if mode == archive.CompressionNeutronDAG || mode == archive.CompressionNeutronDense || mode == archive.CompressionNeutronRMG {
 		fmt.Printf("Математических ссылок: %d\n", s.MathRefChunks)
 	}
-	if mode == archive.CompressionNeutronDense {
+	if mode == archive.CompressionNeutronDense || mode == archive.CompressionNeutronRMG {
 		fmt.Printf("Встроенных математических файлов: %d\n", s.InlineMathFiles)
+	}
+	if mode == archive.CompressionNeutronRMG {
+		fmt.Printf("Матричных RMG блоков: %d\n", s.RMGChunks)
 	}
 	fmt.Printf("Исходный объём: %s\n", humanBytes(s.SourceBytes))
 	fmt.Printf("Размер архива: %s\n", humanBytes(result.Bytes))
@@ -242,7 +247,7 @@ func printHelp() {
   deduparc info <архив.darc>                           Показать статистику
   deduparc version                                     Показать версию
 
-Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme, --neutron, --neutron-dag, --neutron-dense (экспериментальные)
+Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme, --neutron, --neutron-dag, --neutron-dense, --neutron-rmg (экспериментальные)
 Короткие команды: c, l, x, v, i
 `, version.Current)
 }

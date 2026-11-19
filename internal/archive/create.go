@@ -159,13 +159,13 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 			},
 		},
 	}
-	if options.Compression == CompressionExtreme || options.Compression == CompressionNeutron || options.Compression == CompressionNeutronDAG || options.Compression == CompressionNeutronDense {
+	if options.Compression == CompressionExtreme || options.Compression == CompressionNeutron || options.Compression == CompressionNeutronDAG || options.Compression == CompressionNeutronDense || options.Compression == CompressionNeutronRMG {
 		w.deltaMatcher = newDeltaMatcher()
 	}
-	if options.Compression == CompressionNeutronDAG || options.Compression == CompressionNeutronDense {
+	if options.Compression == CompressionNeutronDAG || options.Compression == CompressionNeutronDense || options.Compression == CompressionNeutronRMG {
 		w.mathRefs = &mathRefEncoder{}
 	}
-	if options.Compression == CompressionNeutronDense {
+	if options.Compression == CompressionNeutronDense || options.Compression == CompressionNeutronRMG {
 		w.inlineMatcher = &mathRefEncoder{}
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
@@ -250,7 +250,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense, CompressionNeutronRMG:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -266,7 +266,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense:
+		case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense, CompressionNeutronRMG:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -288,6 +288,9 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 }
 
 func archiveVersion(mode CompressionMode) int {
+	if mode == CompressionNeutronRMG {
+		return 7
+	}
 	if mode == CompressionNeutronDense {
 		return 6
 	}
@@ -307,7 +310,7 @@ func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense:
+	case CompressionMaximum, CompressionExtreme, CompressionNeutron, CompressionNeutronDAG, CompressionNeutronDense, CompressionNeutronRMG:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -572,11 +575,16 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 	if err != nil {
 		return err
 	}
-	if w.compression == CompressionNeutron || w.compression == CompressionNeutronDAG || w.compression == CompressionNeutronDense {
+	if w.compression == CompressionNeutron || w.compression == CompressionNeutronDAG || w.compression == CompressionNeutronDense || w.compression == CompressionNeutronRMG {
 		try := mathTry
-		if w.compression == CompressionNeutronDense { try = mathTryDense }
+		if w.compression == CompressionNeutronDense || w.compression == CompressionNeutronRMG { try = mathTryDense }
 		if mathPacked, ok := try(data, len(packed)-16); ok {
 			method, packed = methodMath, mathPacked
+		}
+	}
+	if w.compression == CompressionNeutronRMG {
+		if rmgPacked, ok := rmgTry(data, len(packed)); ok {
+			method, packed = methodRMG, rmgPacked
 		}
 	}
 	if w.deltaMatcher != nil {
@@ -604,6 +612,9 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 	}
 	if method == methodMathRef {
 		w.manifest.Stats.MathRefChunks++
+	}
+	if method == methodRMG {
+		w.manifest.Stats.RMGChunks++
 	}
 	w.manifest.Stats.StoredBytes += int64(len(packed))
 	if err := writeChunkRecord(w.out, digest, uint32(len(data)), method, packed); err != nil {

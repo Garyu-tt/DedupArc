@@ -40,6 +40,7 @@ const (
 	CompressionNeutron  CompressionMode = "neutron"
 	CompressionNeutronDAG CompressionMode = "neutron-dag"
 	CompressionNeutronDense CompressionMode = "neutron-dense"
+	CompressionNeutronRMG CompressionMode = "neutron-rmg"
 )
 
 type CompressionInfo struct {
@@ -77,6 +78,7 @@ type Stats struct {
 	MathChunks          int   `json:"math_chunks,omitempty"`
 	MathRefChunks       int   `json:"math_ref_chunks,omitempty"`
 	InlineMathFiles     int   `json:"inline_math_files,omitempty"`
+	RMGChunks           int   `json:"rmg_chunks,omitempty"`
 	SourceBytes         int64 `json:"source_bytes"`
 	UniqueRawBytes      int64 `json:"unique_raw_bytes"`
 	StoredBytes         int64 `json:"stored_bytes"`
