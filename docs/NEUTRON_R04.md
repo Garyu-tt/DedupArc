@@ -35,6 +35,36 @@ retained by the existing R03 matcher. The whole-file check is limited to
 8 MiB to avoid unbounded memory growth. Memory allocation and throughput
 are not yet production-hardened.
 
+## Further density improvements in this branch
+
+### Compact manifest table
+
+Large sets of inline files can use an alternate binary `inline_table`
+inside the same zlib-compressed MNF2 catalog, with original file paths,
+sizes, modes, mtimes, full 32-byte SHA-256 digests and exact reference
+bytecode. The writer compares the compressed standard and compact manifests
+and keeps the smaller one. The reader reconstructs ordinary entries and
+strictly checks varints, counts, bounds, SHA lengths and extra data.
+
+### Quadratic integer-only bytecode (v6 only)
+
+New opcode `A3 a b c count patches...` generates
+
+```
+byte[i] = (a + b*i + c*(i*(i-1)/2)) mod 256
+```
+
+using only exact integer arithmetic. The pure quadratic formula with no
+patches takes **5 bytes** of bytecode, regardless of decoded length.
+Dominant second/first differences are used to estimate `a,b,c` from
+a bounded 4096-byte sample, and every source byte is checked before
+accepting the packed result. Sparse deviations are encoded exactly.
+The existing v4/v5 writers do **not** emit A3 and the new reader rejects
+A3 in legacy-v4/v5 physical math chunks.
+
+This is useful for integer sequences, deterministic synthetic data and some
+structured numeric arrays. It does not help arbitrary/random data.
+
 ## Compatibility
 
 | Mode | Writer manifest |
