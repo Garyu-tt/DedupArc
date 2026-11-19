@@ -573,7 +573,9 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 		return err
 	}
 	if w.compression == CompressionNeutron || w.compression == CompressionNeutronDAG || w.compression == CompressionNeutronDense {
-		if mathPacked, ok := mathTry(data, len(packed)-16); ok {
+		try := mathTry
+		if w.compression == CompressionNeutronDense { try = mathTryDense }
+		if mathPacked, ok := try(data, len(packed)-16); ok {
 			method, packed = methodMath, mathPacked
 		}
 	}
