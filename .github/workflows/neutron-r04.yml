@@ -1,0 +1,39 @@
+name: Neutron R04 dense research
+
+on:
+  push:
+    branches:
+      - experiment/neutron-r04-inline-formulas
+  pull_request:
+    paths:
+      - 'internal/archive/**'
+      - 'cmd/deduparc/**'
+      - 'scripts/benchmark_extreme.py'
+      - '.github/workflows/neutron-r04.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: All Go tests
+        run: go test ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: R04 inline archive roundtrip, regressions and corruption
+        run: go test -count=1 -v ./internal/archive -run 'TestNeutronR04|TestNeutronDAG|TestMath'
+      - name: Compile CLI
+        run: go build -o deduparc-core ./cmd/deduparc
+      - name: Compare R01/R02/R03/R04 with archive integrity
+        run: python3 scripts/benchmark_extreme.py --binary ./deduparc-core --workdir /tmp/neutron-r04
+      - name: Benchmark JSON
+        run: cat /tmp/neutron-r04/results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neutron-r04-dense-benchmark
+          path: /tmp/neutron-r04/results.json

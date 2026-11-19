@@ -12,6 +12,7 @@ const (
 	mathConstant byte = 0xA0
 	mathAffine byte = 0xA1
 	mathPeriodic byte = 0xA2
+	mathQuadratic byte = 0xA3 // v6 only
 	mathMaxPeriod = 32
 	mathMaxRaw = 32 * 1024 * 1024
 	mathSample = 4096
@@ -19,7 +20,7 @@ const (
 
 type mathPlan struct {
 	op byte
-	a, step byte
+	a, step, curvature byte
 	pattern []byte
 	estimated int
 }
@@ -30,6 +31,8 @@ func (p mathPlan) value(i int) byte {
 		return p.a
 	case mathAffine:
 		return p.a + byte(i)*p.step
+	case mathQuadratic:
+		return p.a + byte(i)*p.step + triangularMod(i)*p.curvature
 	default:
 		return p.pattern[i%len(p.pattern)]
 	}
@@ -127,6 +130,9 @@ func mathDecode(code []byte, rawSize uint32) ([]byte,error) {
 	case mathAffine:
 		if len(code)<cursor+2 {return nil,fmt.Errorf("math bytecode: truncated affine")}
 		p.a,p.step=code[cursor],code[cursor+1];cursor+=2
+	case mathQuadratic:
+		if len(code)<cursor+3 {return nil,fmt.Errorf("math bytecode: truncated quadratic")}
+		p.a,p.step,p.curvature=code[cursor],code[cursor+1],code[cursor+2];cursor+=3
 	case mathPeriodic:
 		if len(code)<cursor+1 {return nil,fmt.Errorf("math bytecode: truncated period")}
 		period:=int(code[cursor]);cursor++
