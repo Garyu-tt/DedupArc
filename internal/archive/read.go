@@ -159,8 +159,39 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4 && manifest.Version != 5) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4 && manifest.Version != 5 && manifest.Version != 6) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
+	}
+
+	// Inline mathematical references are only legal in v6, and cannot
+	// coexist with CHNK or PACK links in the same entry.
+	if manifest.Version < 6 && len(manifest.MathRoots) > 0 {
+		return Manifest{}, ErrInvalidArchive
+	}
+	if len(manifest.MathRoots) > inlineMathMaxRoots {
+		return Manifest{}, ErrInvalidArchive
+	}
+	for _, root := range manifest.MathRoots {
+		if manifest.Version != 6 || root.Size < inlineMathMinRaw ||
+			root.Size > inlineMathMaxRaw || len(root.Code) < 3 ||
+			len(root.Code) > inlineMathMaxCode || !isPureMathCode(root.Code) {
+			return Manifest{}, ErrInvalidArchive
+		}
+	}
+	for _, entry := range manifest.Entries {
+		if len(entry.InlineMath) == 0 { continue }
+		if manifest.Version != 6 || entry.Type != "file" ||
+			entry.Size < inlineMathMinRaw || entry.Size > inlineMathMaxRaw ||
+			len(entry.InlineMath) > inlineMathMaxCode ||
+			entry.Packed != nil || len(entry.Chunks) != 0 ||
+			len(entry.SHA256) != 64 {
+			return Manifest{}, ErrInvalidArchive
+		}
+		index, n := binary.Uvarint(entry.InlineMath)
+		if n <= 0 || index >= uint64(len(manifest.MathRoots)) ||
+			manifest.MathRoots[index].Size != uint32(entry.Size) {
+			return Manifest{}, ErrInvalidArchive
+		}
 	}
 	return manifest, nil
 }
@@ -181,7 +212,7 @@ func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]c
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
-		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version >= 4) && !(method == methodMathRef && version == 5) {
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version >= 4) && !(method == methodMathRef && version >= 5) {
 			return nil, nil, ErrInvalidArchive
 		}
 		if method == methodMath && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 3 || packedSize >= rawSize) {
@@ -333,6 +364,11 @@ func (r *Reader) readPackedChunk(hash string) ([]byte, error) {
 }
 
 func (r *Reader) entryData(entry Entry, emit func([]byte) error) error {
+	if len(entry.InlineMath) != 0 {
+		data, err := r.decodeInlineMath(entry)
+		if err != nil { return err }
+		return emit(data)
+	}
 	if entry.Packed != nil {
 		data, err := r.readPackedChunk(entry.Packed.Chunk)
 		if err != nil {
@@ -360,6 +396,10 @@ func (r *Reader) entryData(entry Entry, emit func([]byte) error) error {
 // StoredSize возвращает приблизительный физический объём данных файла внутри архива.
 // Для файлов из общего блока значение распределяется пропорционально их длине.
 func (r *Reader) StoredSize(entry Entry) int64 {
+	if len(entry.InlineMath) != 0 {
+		// Logical size estimate: shared-root catalog overhead is not allocated.
+		return int64(len(entry.InlineMath))
+	}
 	if entry.Packed != nil {
 		record, ok := r.chunks[entry.Packed.Chunk]
 		if !ok || record.RawSize == 0 || entry.Packed.Length == 0 {
