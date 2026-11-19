@@ -70,6 +70,32 @@ R03 is intentionally not used for all `--neutron` archives. Readiness
 requires corrupt-archive fuzzing and measurements on code trees, VM images,
 neural weights and real filesystem snapshots, including wall time and peak RAM.
 
+## Verified CI results (2026-11-19)
+
+[Linux Go tests and 5-corpus benchmark](https://github.com/Garyu-tt/DedupArc/actions/runs/44483933762):
+`go test ./...`, `go vet ./...`, CLI build, SHA-256-based roundtrip
+verification for all 5 synthetic datasets: **PASS**.
+
+| Corpus | Source bytes | Neutron R02 v4 | Neutron R03 v5 | tar.zstd -19 |
+| --- | ---: | ---: | ---: | ---: |
+| Versioned binaries | 41,943,040 | 4,253,365 B | 4,253,369 B | 4,206,596 B |
+| Random binaries | 4,194,304 | 4,196,173 B | 4,196,175 B | 4,194,953 B |
+| Text configs | 1,837,782 | 24,815 B | 24,823 B | 22,869 B |
+| Math formulas | 8,388,608 | 1,543 B | 1,546 B | 1,790 B |
+| Shared math roots | 4,194,304 | 1,839 B | **1,660 B** | **880 B** |
+
+On the shared-math corpus, R03 uses formula references and saves **179 B
+(9.7%)** of the *complete archive* relative to R02. On other corpora it is
+2–8 B bigger: no additional gain, and v5 metadata is slightly longer. The
+separate fixed-chunk Go regression yielded R02=1681 B and R03=1467 B
+(12.7% smaller), with 7 root references.
+
+**The shared-math reference corpus remains larger than tar.zstd -19**.
+These are small, synthetic, repetitive datasets: the figures do not imply
+general superiority over Zstandard, do not violate information-theoretic
+bounds, and cannot be extrapolated to random/real files. Timing comparisons
+to tar codecs omit tar assembly.
+
 ## Further directions
 
 1. Move from chunk-root references to an explicit *content-addressed formula
