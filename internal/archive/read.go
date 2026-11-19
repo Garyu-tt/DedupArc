@@ -261,6 +261,9 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 
 	var data []byte
 	var err error
+	if record.Method == methodMath && r.Manifest.Version < 6 && len(packed) > 0 && packed[0] == mathQuadratic {
+		return nil, ErrInvalidArchive
+	}
 	if record.Method == methodDeltaZlib {
 		baseHash := hex.EncodeToString(packed[:32])
 		base, exists := r.chunks[baseHash]
