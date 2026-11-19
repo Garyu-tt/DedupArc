@@ -43,6 +43,23 @@ A local standalone Go math-codec smoke test, before integration, yielded:
 
 These are **codec payloads**, excluding DARC headers, file metadata and manifest. They are not representative of general-purpose compression. Whole-archive gains must be measured separately.
 
+## Verified full-archive benchmark (2026-11-19)
+
+Linux CI, Go 1.23, one reproducible Python seed, all archive sizes include DARC/tar metadata. **All four recovered file trees: SHA-256 PASS.** The math category was deliberately constructed from formulas; performance on real-world data is not inferred.
+
+| Corpus | Source bytes | Maximum v2 | Extreme v3 | Neutron v4 | tar.xz -9 | tar.zstd -19 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Versioned binaries | 41,943,040 | 41,885,307 | 4,253,367 | 4,253,365 | 4,206,724 | 4,206,614 |
+| Random binaries | 4,194,304 | 4,196,169 | 4,196,170 | 4,196,171 | 4,198,408 | 4,194,939 |
+| Text configs | 1,837,782 | 24,813 | 24,817 | 24,815 | 24,212 | 22,580 |
+| Mathematical patterns | 8,388,608 | 18,906 | 18,907 | **1,543** | 2,204 | 1,780 |
+
+On mathematical patterns: **5436.557×** compression from source to complete v4 archive; **12.25×** smaller than R01. Whole-archive 256 KiB affine regression: Maximum=1856 B; Neutron=514 B.
+
+Note: Zstandard's reported time excludes creating tar, so performance/time rankings are not directly comparable. These are intentionally synthetic, not an overall benchmark.
+
+CI evidence: https://github.com/Garyu-tt/DedupArc/actions/runs/44479547169
+
 ## Safety and compatibility
 
 - v1/v2/v3 reading stays supported, v2/v3 writing unchanged for their original modes.
