@@ -157,7 +157,7 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 			},
 		},
 	}
-	if options.Compression == CompressionExtreme {
+	if options.Compression == CompressionExtreme || options.Compression == CompressionNeutron {
 		w.deltaMatcher = newDeltaMatcher()
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
@@ -242,7 +242,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionNeutron:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -258,7 +258,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum, CompressionExtreme:
+		case CompressionMaximum, CompressionExtreme, CompressionNeutron:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -280,6 +280,9 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 }
 
 func archiveVersion(mode CompressionMode) int {
+	if mode == CompressionNeutron {
+		return 4
+	}
 	if mode == CompressionExtreme {
 		return 3
 	}
@@ -290,7 +293,7 @@ func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum, CompressionExtreme:
+	case CompressionMaximum, CompressionExtreme, CompressionNeutron:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -550,6 +553,11 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 	if err != nil {
 		return err
 	}
+	if w.compression == CompressionNeutron {
+		if mathPacked, ok := mathTry(data, len(packed)-16); ok {
+			method, packed = methodMath, mathPacked
+		}
+	}
 	if w.deltaMatcher != nil {
 		deltaMethod, deltaPacked, ok, err := w.deltaMatcher.try(data, len(packed))
 		if err != nil {
@@ -561,6 +569,9 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 		} else {
 			w.deltaMatcher.offer(digest, data)
 		}
+	}
+	if method == methodMath {
+		w.manifest.Stats.MathChunks++
 	}
 	w.manifest.Stats.StoredBytes += int64(len(packed))
 	return writeChunkRecord(w.out, digest, uint32(len(data)), method, packed)
