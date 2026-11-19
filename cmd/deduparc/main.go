@@ -50,7 +50,7 @@ func run(args []string) error {
 
 func commandCreate(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme] <архив.darc> <файл|каталог> [...]")
+		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme|--neutron] <архив.darc> <файл|каталог> [...]")
 	}
 	mode := archive.CompressionBalanced
 	if strings.HasPrefix(args[0], "--") {
@@ -63,6 +63,8 @@ func commandCreate(args []string) error {
 			mode = archive.CompressionMaximum
 		case "--extreme":
 			mode = archive.CompressionExtreme
+		case "--neutron":
+			mode = archive.CompressionNeutron
 		default:
 			return fmt.Errorf("неизвестный режим сжатия %q", args[0])
 		}
@@ -81,8 +83,11 @@ func commandCreate(args []string) error {
 	fmt.Printf("Создан: %s\n", output)
 	fmt.Printf("Файлов: %d, каталогов: %d\n", s.Files, s.Directories)
 	fmt.Printf("Мелких файлов объединено: %d в %d блоков\n", s.SmallFiles, s.SmallPacks)
-	if mode == archive.CompressionExtreme {
+	if mode == archive.CompressionExtreme || mode == archive.CompressionNeutron {
 		fmt.Printf("Дельта-блоков: %d\n", s.DeltaChunks)
+	}
+	if mode == archive.CompressionNeutron {
+		fmt.Printf("Математических блоков: %d\n", s.MathChunks)
 	}
 	fmt.Printf("Исходный объём: %s\n", humanBytes(s.SourceBytes))
 	fmt.Printf("Размер архива: %s\n", humanBytes(result.Bytes))

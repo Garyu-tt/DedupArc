@@ -156,7 +156,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 	return manifest, nil
@@ -177,7 +177,10 @@ func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]c
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
-		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version == 3) {
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodMath && version == 4) {
+			return nil, ErrInvalidArchive
+		}
+		if method == methodMath && (rawSize == 0 || rawSize > mathMaxRaw || packedSize < 3 || packedSize >= rawSize) {
 			return nil, ErrInvalidArchive
 		}
 		if method == methodDeltaZlib && (packedSize < 33 || rawSize < deltaMinSize || rawSize > deltaMaxSize || packedSize > deltaMaxSize+32) {
@@ -253,6 +256,8 @@ func unpackData(method byte, packed []byte, rawSize uint32) ([]byte, error) {
 	switch method {
 	case methodRaw:
 		data = append([]byte(nil), packed...)
+	case methodMath:
+		return mathDecode(packed, rawSize)
 	case methodZlib:
 		zr, err := zlib.NewReader(bytes.NewReader(packed))
 		if err != nil {

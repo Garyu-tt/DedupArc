@@ -42,6 +42,17 @@ def corpus(root, category, scale):
         for i in range(1200*scale):
             text = (template + json.dumps({"id":i % 201,"variant":i%7}, sort_keys=True) + "\n") * (10+(i%9))
             (root / f"config-{i:05}.json").write_text(text, encoding="utf-8")
+    elif category == "math":
+        length = 2 * 1024 * 1024 * scale
+        pattern = bytes(range(256))
+        (root / "affine.bin").write_bytes(pattern * (length // 256))
+        (root / "constant.bin").write_bytes(bytes([0x7d]) * length)
+        (root / "periodic.bin").write_bytes((b"abcdefg" * ((length + 6) // 7))[:length])
+        patched = bytearray(pattern * (length // 256))
+        for _ in range(100 * scale):
+            at = rng.randrange(len(patched))
+            patched[at] ^= rng.randint(1, 255)
+        (root / "affine-patched.bin").write_bytes(patched)
     return sorted(p for p in root.rglob("*") if p.is_file())
 
 def run(args, stdout=None):
@@ -57,7 +68,7 @@ def benchmark(binary, directory, category, scale):
     expected = {p.relative_to(source).as_posix():digest(p) for p in files}
     report = {"category":category,"files":len(files),"source_bytes":raw,
               "codecs":{},"sha256_roundtrip":"PASS"}
-    for mode in ("maximum","extreme"):
+    for mode in ("maximum","extreme","neutron"):
         dest = directory / f"{category}-{mode}.darc"
         took = run([str(binary),"create","--"+mode,str(dest),str(source)])
         run([str(binary),"verify",str(dest)])
@@ -101,10 +112,10 @@ def main():
     if workdir.exists(): ap.error("workdir already exists: use a fresh directory")
     workdir.mkdir(parents=True)
     report={"seed":SEED,"platform":platform.platform(),"scale":args.scale,
-            "methods":"DedupArc maximum/extreme, tar.xz -9, tar.zstd -19",
-            "note":"Synthetic repeated versions designed to demonstrate delta coding; not a general compression ranking. tar+codec times exclude tar assembly.",
+            "methods":"DedupArc maximum/extreme/neutron, tar.xz -9, tar.zstd -19",
+            "note":"Synthetic corpora: versioned for delta coding, math for formula coding, text/random for negative controls. Not a general compression ranking. tar+codec times exclude tar assembly.",
             "datasets":[]}
-    for name in ("versioned","random","text"):
+    for name in ("versioned","random","text","math"):
         result=benchmark(binary,workdir,name,args.scale)
         report["datasets"].append(result)
         print(json.dumps(result,ensure_ascii=False),flush=True)
