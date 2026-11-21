@@ -31,11 +31,12 @@ func TestEvenResidueCodecExactRoundtrip(t *testing.T) {
 	if len(residue) != len(changed)/8 {
 		t.Fatal("unexpected residue size")
 	}
+	originalBase := bytes.Clone(base)
 	restored, err := unpackEvenResidues(base, residue)
 	if err != nil || !bytes.Equal(restored, changed) {
 		t.Fatalf("roundtrip failed: %v", err)
 	}
-	if !bytes.Equal(base, bytes.Clone(base)) {
+	if !bytes.Equal(base, originalBase) {
 		t.Fatal("base mutated")
 	}
 	base[100] ^= 4
@@ -62,6 +63,7 @@ func TestEvenResidueMalformedPayload(t *testing.T) {
 func TestExtremeEvenMatcherRejectsNonMatchingHighBits(t *testing.T) {
 	base, changed := testEvenPair()
 	m := newDeltaMatcher()
+	m.evenEnabled = true
 	m.offer(sha256.Sum256(base), base)
 	method, payload, ok := m.tryEven(changed, len(changed))
 	if !ok || method != methodEvenResidual || len(payload) != 32+len(changed)/8 {
