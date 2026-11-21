@@ -20,6 +20,7 @@ const (
 type deltaKey struct {
 	size uint32
 	slot uint8
+	kind uint8
 	hash uint64
 }
 
@@ -55,7 +56,7 @@ func deltaKeys(data []byte) []deltaKey {
 }
 
 func (m *deltaMatcher) offer(digest [32]byte, data []byte) {
-	keys := deltaKeys(data)
+	keys := append(deltaKeys(data), evenKeys(data)...)
 	if len(keys) == 0 || m.cache[digest] != nil {
 		return
 	}
@@ -65,7 +66,7 @@ func (m *deltaMatcher) offer(digest [32]byte, data []byte) {
 		if cached, ok := m.cache[old]; ok {
 			m.bytes -= len(cached)
 			delete(m.cache, old)
-			for _, key := range deltaKeys(cached) {
+			for _, key := range append(deltaKeys(cached), evenKeys(cached)...) {
 				ids := m.index[key]
 				for i, id := range ids {
 					if id == old {
