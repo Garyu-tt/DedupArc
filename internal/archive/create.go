@@ -157,9 +157,10 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 			},
 		},
 	}
-	if options.Compression == CompressionExtreme || options.Compression == CompressionExtremeEven {
+	if options.Compression == CompressionExtreme || options.Compression == CompressionExtremeEven || options.Compression == CompressionExtremeBasis {
 		w.deltaMatcher = newDeltaMatcher()
 		w.deltaMatcher.evenEnabled = options.Compression == CompressionExtremeEven
+		w.deltaMatcher.basisEnabled = options.Compression == CompressionExtremeBasis
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
 
@@ -243,7 +244,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionExtremeEven, CompressionExtremeBasis:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -259,7 +260,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
+		case CompressionMaximum, CompressionExtreme, CompressionExtremeEven, CompressionExtremeBasis:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -284,7 +285,7 @@ func archiveVersion(mode CompressionMode) int {
 	if mode == CompressionExtremeEven {
 		return 4
 	}
-	if mode == CompressionExtreme {
+	if mode == CompressionExtreme || mode == CompressionExtremeBasis {
 		return 3
 	}
 	return 2
@@ -294,7 +295,7 @@ func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
+	case CompressionMaximum, CompressionExtreme, CompressionExtremeEven, CompressionExtremeBasis:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -571,10 +572,25 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 				selected = true
 			}
 		}
+		usedBasis := false
+		if w.compression == CompressionExtremeBasis {
+			basisMethod, basisPacked, basisOK, basisErr := w.deltaMatcher.tryBasis(data, len(packed))
+			if basisErr != nil {
+				return basisErr
+			}
+			if basisOK {
+				method, packed = basisMethod, basisPacked
+				selected = true
+				usedBasis = true
+			}
+		}
 		if selected {
 			w.manifest.Stats.DeltaChunks++
 			if method == methodEvenResidual {
 				w.manifest.Stats.EvenResidualChunks++
+			}
+			if usedBasis {
+				w.manifest.Stats.BasisChunks++
 			}
 		} else {
 			w.deltaMatcher.offer(digest, data)
