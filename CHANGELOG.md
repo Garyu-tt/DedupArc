@@ -1,5 +1,10 @@
 # Unreleased
 
+- Add experimental `--extreme-basis`: lossless shared-base matching using normalized uint16 high-byte samples while continuing to write standard v3 XOR-deltas; no new on-disk format.
+- Add dense low-byte-change baseline comparison, multi-block shared-reference and roundtrip tests.
+
+# Unreleased
+
 - Add opt-in `--extreme-even` archive v4: reference shared high 14 bits of aligned 16-bit words and pack exact two-bit residues. This is lossless, SHA-256-verified, and selected only when smaller than the best existing codec.
 - Keep default v2 and `--extreme` v3 writers unchanged; readers now accept v4.
 
