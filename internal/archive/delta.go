@@ -26,6 +26,7 @@ type deltaKey struct {
 
 type deltaMatcher struct {
 	evenEnabled bool
+	basisEnabled bool
 	index map[deltaKey][][32]byte
 	cache map[[32]byte][]byte
 	order [][32]byte
@@ -61,6 +62,9 @@ func (m *deltaMatcher) keysFor(data []byte) []deltaKey {
 	keys := deltaKeys(data)
 	if m.evenEnabled {
 		keys = append(keys, evenKeys(data)...)
+	}
+	if m.basisEnabled {
+		keys = append(keys, basisKeys(data)...)
 	}
 	return keys
 }
