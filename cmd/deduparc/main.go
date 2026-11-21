@@ -232,7 +232,7 @@ func printHelp() {
   deduparc info <архив.darc>                           Показать статистику
   deduparc version                                     Показать версию
 
-Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme (экспериментальный)
+Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme, --extreme-even (экспериментальный)
 Короткие команды: c, l, x, v, i
 `, version.Current)
 }
