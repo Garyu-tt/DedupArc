@@ -1,3 +1,8 @@
+# Unreleased
+
+- Add opt-in `--extreme-even` archive v4: reference shared high 14 bits of aligned 16-bit words and pack exact two-bit residues. This is lossless, SHA-256-verified, and selected only when smaller than the best existing codec.
+- Keep default v2 and `--extreme` v3 writers unchanged; readers now accept v4.
+
 ## 1.1.0 — 2026-11-08
 
 - Экспериментальный профиль CLI `create --extreme` для потерь-ноль сжатия похожих бинарных версий.

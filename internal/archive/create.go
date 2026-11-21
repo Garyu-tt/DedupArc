@@ -157,8 +157,9 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 			},
 		},
 	}
-	if options.Compression == CompressionExtreme {
+	if options.Compression == CompressionExtreme || options.Compression == CompressionExtremeEven {
 		w.deltaMatcher = newDeltaMatcher()
+		w.deltaMatcher.evenEnabled = options.Compression == CompressionExtremeEven
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
 
@@ -242,7 +243,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		options.Compression = CompressionBalanced
 	}
 	switch options.Compression {
-	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme:
+	case CompressionFast, CompressionBalanced, CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
 	default:
 		options.Compression = CompressionBalanced
 	}
@@ -258,7 +259,7 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 		switch options.Compression {
 		case CompressionFast:
 			options.SmallPackTarget = 4 * 1024 * 1024
-		case CompressionMaximum, CompressionExtreme:
+		case CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
 			options.SmallPackTarget = 16 * 1024 * 1024
 		default:
 			options.SmallPackTarget = defaultSmallPackTarget
@@ -280,6 +281,9 @@ func normalizeCreateOptions(options CreateOptions) CreateOptions {
 }
 
 func archiveVersion(mode CompressionMode) int {
+	if mode == CompressionExtremeEven {
+		return 4
+	}
 	if mode == CompressionExtreme {
 		return 3
 	}
@@ -290,7 +294,7 @@ func compressionLevels(mode CompressionMode) (chunkLevel, packLevel int) {
 	switch mode {
 	case CompressionFast:
 		return zlib.BestSpeed, 3
-	case CompressionMaximum, CompressionExtreme:
+	case CompressionMaximum, CompressionExtreme, CompressionExtremeEven:
 		return zlib.BestCompression, zlib.BestCompression
 	default:
 		return 8, zlib.BestCompression
@@ -551,13 +555,27 @@ func (w *writer) storeChunk(digest [32]byte, data []byte, level int, entropySkip
 		return err
 	}
 	if w.deltaMatcher != nil {
+		selected := false
 		deltaMethod, deltaPacked, ok, err := w.deltaMatcher.try(data, len(packed))
 		if err != nil {
 			return err
 		}
 		if ok {
 			method, packed = deltaMethod, deltaPacked
+			selected = true
+		}
+		if w.compression == CompressionExtremeEven {
+			evenMethod, evenPacked, evenOK := w.deltaMatcher.tryEven(data, len(packed))
+			if evenOK {
+				method, packed = evenMethod, evenPacked
+				selected = true
+			}
+		}
+		if selected {
 			w.manifest.Stats.DeltaChunks++
+			if method == methodEvenResidual {
+				w.manifest.Stats.EvenResidualChunks++
+			}
 		} else {
 			w.deltaMatcher.offer(digest, data)
 		}

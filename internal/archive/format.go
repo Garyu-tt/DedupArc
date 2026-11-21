@@ -14,6 +14,7 @@ const (
 	methodRaw       byte = 0
 	methodZlib      byte = 1
 	methodDeltaZlib byte = 2
+	methodEvenResidual byte = 3
 	footerSize           = 4 + 8 + 32
 
 	defaultSmallFileThreshold = 256 * 1024
