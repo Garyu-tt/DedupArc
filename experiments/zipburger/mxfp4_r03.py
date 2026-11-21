@@ -50,7 +50,10 @@ def _unpack_codes(b: np.ndarray) -> np.ndarray:
 
 def _pack_mantissa_row(m: np.ndarray, zero_neg: np.ndarray) -> bytes:
     """Reconstruct original nibble codes, including the sign of zero."""
-    codes = np.fromiter((MAG_TO_CODE[int(x)] for x in m), dtype=np.uint8, count=m.size)
+    try:
+        codes = np.fromiter((MAG_TO_CODE[int(x)] for x in m), dtype=np.uint8, count=m.size)
+    except KeyError as exc:
+        raise ValueError('invalid E2M1 mantissa in graph payload') from exc
     if zero_neg.size != np.count_nonzero(m == 0):
         raise ValueError('negative-zero sideband count mismatch')
     codes[m == 0] = zero_neg.astype(np.uint8) * 8
@@ -203,7 +206,12 @@ class RawMxfp4CarrierR03:
 
     @property
     def zero_count(self):
-        return 0  # no extra zero sideband; signs stored in the original nibbles
+        count=0
+        for packed,_ in self.stream_original():
+            block=np.frombuffer(packed,dtype=np.uint8)
+            count += int(np.count_nonzero((block & 7)==0))
+            count += int(np.count_nonzero(((block>>4)&7)==0))
+        return count  # signs are present in original nibbles, no extra sideband
 
     @classmethod
     def from_payload(cls, payload: bytes):
