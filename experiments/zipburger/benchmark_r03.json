@@ -56,7 +56,7 @@
       "mantissa_links": 0,
       "mantissa_residuals": 0,
       "scale_root_neurons": 0,
-      "negative_and_positive_zero_count": 0,
+      "negative_and_positive_zero_count": 796,
       "pack_ms": 23.55,
       "one_dot_ms": 1.282,
       "exact_packed_bits": true,
