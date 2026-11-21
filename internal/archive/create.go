@@ -159,6 +159,7 @@ func Create(output string, inputs []string, options CreateOptions) (CreateResult
 	}
 	if options.Compression == CompressionExtreme || options.Compression == CompressionExtremeEven {
 		w.deltaMatcher = newDeltaMatcher()
+		w.deltaMatcher.evenEnabled = options.Compression == CompressionExtremeEven
 	}
 	w.manifest.Entries = make([]Entry, 0, len(scanned))
 
