@@ -156,7 +156,7 @@ func readManifestAt(f *os.File, offset int64, expectedHash []byte) (Manifest, er
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
-	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3) {
+	if manifest.Format != "deduparc" || (manifest.Version != 1 && manifest.Version != 2 && manifest.Version != 3 && manifest.Version != 4) {
 		return Manifest{}, fmt.Errorf("неподдерживаемая версия формата")
 	}
 	return manifest, nil
@@ -177,10 +177,13 @@ func scanChunkIndex(f *os.File, manifestOffset int64, version int) (map[string]c
 		rawSize := binary.LittleEndian.Uint32(header[36:40])
 		packedSize := binary.LittleEndian.Uint32(header[40:44])
 		method := header[44]
-		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version == 3) {
+		if method != methodRaw && method != methodZlib && !(method == methodDeltaZlib && version >= 3) && !(method == methodEvenResidual && version == 4) {
 			return nil, ErrInvalidArchive
 		}
 		if method == methodDeltaZlib && (packedSize < 33 || rawSize < deltaMinSize || rawSize > deltaMaxSize || packedSize > deltaMaxSize+32) {
+			return nil, ErrInvalidArchive
+		}
+		if method == methodEvenResidual && (rawSize < deltaMinSize || rawSize > deltaMaxSize || rawSize%2 != 0 || packedSize != 32+(rawSize/2+3)/4) {
 			return nil, ErrInvalidArchive
 		}
 		dataOffset := offset + int64(len(header))
@@ -217,10 +220,10 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 
 	var data []byte
 	var err error
-	if record.Method == methodDeltaZlib {
+	if record.Method == methodDeltaZlib || record.Method == methodEvenResidual {
 		baseHash := hex.EncodeToString(packed[:32])
 		base, exists := r.chunks[baseHash]
-		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || base.Method == methodDeltaZlib {
+		if !exists || baseHash == hash || base.Offset >= record.Offset || base.RawSize != record.RawSize || (base.Method != methodRaw && base.Method != methodZlib) {
 			return nil, fmt.Errorf("неверная ссылка на базовый блок для %s", hash)
 		}
 		var reference []byte
@@ -228,12 +231,19 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		data, err = unpackData(methodZlib, packed[32:], record.RawSize)
-		if err != nil {
-			return nil, err
-		}
-		for i := range data {
-			data[i] ^= reference[i]
+		if record.Method == methodDeltaZlib {
+			data, err = unpackData(methodZlib, packed[32:], record.RawSize)
+			if err != nil {
+				return nil, err
+			}
+			for i := range data {
+				data[i] ^= reference[i]
+			}
+		} else {
+			data, err = unpackEvenResidues(reference, packed[32:])
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		data, err = unpackData(record.Method, packed, record.RawSize)
@@ -241,6 +251,7 @@ func (r *Reader) readChunk(hash string) ([]byte, error) {
 			return nil, err
 		}
 	}
+
 	digest := sha256.Sum256(data)
 	if hex.EncodeToString(digest[:]) != hash {
 		return nil, fmt.Errorf("SHA-256 блока %s не совпадает", hash)
