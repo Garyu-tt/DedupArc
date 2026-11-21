@@ -26,6 +26,7 @@ DedupArc выглядит и ведёт себя как обычный архи�
 - три режима сжатия: **быстро**, **обычно** и **максимум**;
 - экспериментальный режим **Extreme** через CLI для похожих версий бинарных файлов;
 - экспериментальный **Extreme Even** с обратимой дедупликацией старших 14 бит 16-битных слов;
+- экспериментальный **Extreme Basis** для общих баз числовых блоков с многочисленными изменениями младших байтов;
 - автоматический пропуск бессмысленного повторного сжатия уже сжатых форматов;
 - открытие и запуск программ прямо из архива через рабочую сессию;
 - проверка целостности архива перед заменой существующего файла;
@@ -97,6 +98,7 @@ deduparc-core create --maximum archive.darc folder
 deduparc-core create archive.darc folder
 deduparc-core create --extreme versions.darc builds/
 deduparc-core create --extreme-even numbers.darc numeric-data/
+deduparc-core create --extreme-basis versions.darc builds/
 deduparc-core list archive.darc
 deduparc-core extract archive.darc output
 deduparc-core verify archive.darc
@@ -123,7 +125,7 @@ deduparc-core info archive.darc
 
 ## Формат
 
-DedupArc создаёт `.darc` версии 2 в обычных режимах, версии 3 при `--extreme` и версии 4 при `--extreme-even`. Чтение версий 1, 2, 3 и 4 поддерживается. Старые сборки могут не читать новые архивы v4.
+DedupArc создаёт `.darc` версии 2 в обычных режимах, версии 3 при `--extreme` или `--extreme-basis` и версии 4 при `--extreme-even`. Чтение версий 1, 2, 3 и 4 поддерживается. Старые сборки могут не читать новые архивы v4.
 
 Техническое описание находится в [`FORMAT.md`](FORMAT.md).
 
