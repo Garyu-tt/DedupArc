@@ -50,7 +50,7 @@ func run(args []string) error {
 
 func commandCreate(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme|--extreme-even] <архив.darc> <файл|каталог> [...]")
+		return fmt.Errorf("использование: deduparc create [--fast|--balanced|--maximum|--extreme|--extreme-even|--extreme-basis] <архив.darc> <файл|каталог> [...]")
 	}
 	mode := archive.CompressionBalanced
 	if strings.HasPrefix(args[0], "--") {
@@ -65,6 +65,8 @@ func commandCreate(args []string) error {
 			mode = archive.CompressionExtreme
 		case "--extreme-even":
 			mode = archive.CompressionExtremeEven
+		case "--extreme-basis":
+			mode = archive.CompressionExtremeBasis
 		default:
 			return fmt.Errorf("неизвестный режим сжатия %q", args[0])
 		}
@@ -83,10 +85,13 @@ func commandCreate(args []string) error {
 	fmt.Printf("Создан: %s\n", output)
 	fmt.Printf("Файлов: %d, каталогов: %d\n", s.Files, s.Directories)
 	fmt.Printf("Мелких файлов объединено: %d в %d блоков\n", s.SmallFiles, s.SmallPacks)
-	if mode == archive.CompressionExtreme || mode == archive.CompressionExtremeEven {
+	if mode == archive.CompressionExtreme || mode == archive.CompressionExtremeEven || mode == archive.CompressionExtremeBasis {
 		fmt.Printf("Дельта-блоков: %d\n", s.DeltaChunks)
 		if mode == archive.CompressionExtremeEven {
 			fmt.Printf("Из них even2-блоков: %d\n", s.EvenResidualChunks)
+		}
+		if mode == archive.CompressionExtremeBasis {
+			fmt.Printf("Из них shared-basis блоков: %d\n", s.BasisChunks)
 		}
 	}
 	fmt.Printf("Исходный объём: %s\n", humanBytes(s.SourceBytes))
@@ -232,7 +237,7 @@ func printHelp() {
   deduparc info <архив.darc>                           Показать статистику
   deduparc version                                     Показать версию
 
-Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme, --extreme-even (экспериментальный)
+Режимы сжатия: --fast, --balanced (по умолчанию), --maximum, --extreme, --extreme-even, --extreme-basis (экспериментальный)
 Короткие команды: c, l, x, v, i
 `, version.Current)
 }
