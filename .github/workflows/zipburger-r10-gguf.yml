@@ -9,6 +9,8 @@ on:
       - 'experiments/zipburger/gguf_capture_r10.py'
       - 'experiments/zipburger/r10_native/**'
       - 'tests/test_zipburger_native_gguf_r10.py'
+      - 'tests/test_zipburger_meter_r10.py'
+      - 'experiments/zipburger/meter_r10.py'
       - '.github/workflows/zipburger-r10-gguf.yml'
   pull_request:
     paths:
@@ -66,4 +68,5 @@ jobs:
           OMP_NUM_THREADS: '1'
         run: |
           python -m unittest discover -s tests -p 'test_zipburger_native_gguf_r10.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_meter_r10.py' -v
           python -m unittest discover -s tests -p 'test_zipburger_*r09.py' -v
