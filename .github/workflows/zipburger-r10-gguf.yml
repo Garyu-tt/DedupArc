@@ -58,6 +58,17 @@ jobs:
           set -e
           test "$rc" -eq 2
           grep -q 'usage: gguf_eval_r10' "$RUNNER_TEMP/r10_smoke.txt"
+      - name: Verify no runtime dependency on unbundled GGML/llama shared libraries
+        run: |
+          ldd "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10"             | tee "$RUNNER_TEMP/r10-ldd.txt"
+          if grep -Eq 'lib(llama|ggml)(-|\\.)([^ ]*)\\.so' "$RUNNER_TEMP/r10-ldd.txt"; then
+            echo "Unexpected shared llama/ggml dependency: artifact would be broken" >&2
+            exit 1
+          fi
+          (
+            cd "$RUNNER_TEMP/zipburger-r10-build"
+            sha256sum zipburger_gguf_eval_r10 > zipburger_gguf_eval_r10.sha256
+          )
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -75,6 +86,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zipburger-r10-linux-x86_64-cpu
-          path: ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10
+          path: |
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10.sha256
           if-no-files-found: error
           retention-days: 14
