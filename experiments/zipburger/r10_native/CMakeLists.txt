@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 3.21)
+project(zipburger_r10_gguf_probe LANGUAGES C CXX)
+
+# Research-only. Use an isolated llama.cpp checkout at the pinned revision.
+if(NOT DEFINED LLAMA_CPP_ROOT OR NOT EXISTS "${LLAMA_CPP_ROOT}/include/llama.h")
+    message(FATAL_ERROR "LLAMA_CPP_ROOT must point to an existing llama.cpp source tree")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+set(GGML_CUDA OFF CACHE BOOL "" FORCE)
+
+add_subdirectory("${LLAMA_CPP_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/upstream-llama")
+
+add_executable(zipburger_gguf_eval_r10
+    "${CMAKE_CURRENT_LIST_DIR}/../gguf_eval_r10.cpp"
+)
+target_include_directories(zipburger_gguf_eval_r10 PRIVATE
+    "${LLAMA_CPP_ROOT}/include"
+    "${LLAMA_CPP_ROOT}/ggml/include"
+)
+target_link_libraries(zipburger_gguf_eval_r10 PRIVATE llama ggml)
