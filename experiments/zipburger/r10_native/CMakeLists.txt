@@ -24,3 +24,12 @@ target_include_directories(zipburger_gguf_eval_r10 PRIVATE
     "${LLAMA_CPP_ROOT}/ggml/include"
 )
 target_link_libraries(zipburger_gguf_eval_r10 PRIVATE llama ggml)
+
+add_executable(zipburger_gguf_r10_callback_test
+    "${CMAKE_CURRENT_LIST_DIR}/callback_test_r10.cpp"
+)
+target_include_directories(zipburger_gguf_r10_callback_test PRIVATE
+    "${LLAMA_CPP_ROOT}/include"
+    "${LLAMA_CPP_ROOT}/ggml/include"
+)
+target_link_libraries(zipburger_gguf_r10_callback_test PRIVATE llama ggml)
