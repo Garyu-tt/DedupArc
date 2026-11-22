@@ -7,6 +7,7 @@ on:
     paths:
       - 'experiments/zipburger/gguf_eval_r10.cpp'
       - 'experiments/zipburger/gguf_capture_r10.py'
+      - 'experiments/zipburger/r10_native/**'
       - 'tests/test_zipburger_native_gguf_r10.py'
       - '.github/workflows/zipburger-r10-gguf.yml'
   pull_request:
@@ -41,6 +42,19 @@ jobs:
           c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only
           -I _upstream_llama/include -I _upstream_llama/ggml/include
           experiments/zipburger/gguf_eval_r10.cpp
+      - name: Link a standalone native GGUF probe against pinned llama.cpp
+        run: |
+          cmake -S experiments/zipburger/r10_native -B "$RUNNER_TEMP/zipburger-r10-build" \
+            -DLLAMA_CPP_ROOT="$PWD/_upstream_llama" \
+            -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF
+          cmake --build "$RUNNER_TEMP/zipburger-r10-build" \
+            --target zipburger_gguf_eval_r10 -j 2
+          set +e
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10" 2> "$RUNNER_TEMP/r10_smoke.txt"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          grep -q 'usage: gguf_eval_r10' "$RUNNER_TEMP/r10_smoke.txt"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
