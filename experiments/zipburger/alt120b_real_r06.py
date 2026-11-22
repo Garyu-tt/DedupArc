@@ -19,6 +19,7 @@ import lzma
 import numpy as np
 from .mxfp4_palette_r04 import pack
 from .mxfp4_r03 import dense_reference_dot
+from .alt120b_entropy_r07 import profile as profile_mxfp4
 from .real_mxfp4_ranges_r04 import _TrustedHFRedirect, _trusted_host
 
 REPO = "ggml-org/gpt-oss-120b-GGUF"
@@ -220,7 +221,8 @@ def benchmark(header,name,row_start):
         zlib9_bytes=len(zlib.compress(raw,9)),
         xz6_bytes=len(lzma.compress(raw,preset=6)),
         unique_scale_values=int(np.unique(s).size),
-        exact_packed_bytes=True,float64_direct_dot_reference_match=True)
+        exact_packed_bytes=True,float64_direct_dot_reference_match=True,
+        **profile_mxfp4(b,s))
 
 
 def main():
