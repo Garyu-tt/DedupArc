@@ -27,8 +27,8 @@ def fixture(path):
     # One 2D MXFP4 tensor with 12 logical rows; one tiny non-MXFP4 tensor.
     meta = (
         _string("general.alignment") + struct.pack("<II", 4, 32)
-        + _string("tokenizer.ggml.tokens") + struct.pack("<IQ", 9, 8)
-        + struct.pack("<Q", 2) + _string("a") + _string("b")
+        + _string("tokenizer.ggml.tokens") + struct.pack("<IIQ", 9, 8, 2)
+        + _string("a") + _string("b")
     )
     tensor1 = (
         _string("blk.0.ffn_gate_exps.weight")
