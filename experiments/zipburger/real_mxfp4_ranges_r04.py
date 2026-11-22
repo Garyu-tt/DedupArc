@@ -9,6 +9,7 @@ outside trusted HF hosts, or unexpected tensor bounds.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import lzma
@@ -125,7 +126,8 @@ def sample(name: str, row_start=0, rows=48, groups=4, *, fetch=get_range):
     return blocks, scales, bytes(raw), (absolute_start, absolute_end)
 
 
-def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
+def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range,
+              native_lib=None):
     blocks, scales, packed_gguf, (first, last) = sample(
         name, row_start, rows=rows, groups=groups, fetch=fetch)
     start = time.perf_counter()
@@ -157,6 +159,37 @@ def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
     palette_direct = palette.dot(x)
     palette_direct_ms = (time.perf_counter() - start) * 1000
     np.testing.assert_allclose(palette_direct, oracle, rtol=1e-12, atol=1e-8)
+
+    native_fields = {}
+    if native_lib is not None:
+        # Core-only timing: no model download, frame pack, library load,
+        # allocation or API request inside the timed loop. Same 48x16 tile.
+        fn = native_lib.zipburger_r04_gemv
+        fn.argtypes = (ctypes.c_void_p, ctypes.c_size_t,
+                       ctypes.POINTER(ctypes.c_double), ctypes.c_size_t,
+                       ctypes.POINTER(ctypes.c_double), ctypes.c_size_t)
+        fn.restype = ctypes.c_int
+        frame = ctypes.create_string_buffer(palette.payload, palette.frame_bytes)
+        vec = np.ascontiguousarray(x, dtype=np.float64)
+        out = np.zeros(rows, np.float64)
+        xp = vec.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+        yp = out.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+        def invoke():
+            return fn(frame, palette.frame_bytes, xp, vec.size, yp, rows)
+        if invoke() != 0:
+            raise AssertionError("native CPU GEMV rejected verified R04 frame")
+        np.testing.assert_allclose(out, oracle, rtol=1e-12, atol=1e-8)
+        loops = 40
+        t = time.perf_counter_ns()
+        for _ in range(loops):
+            if invoke() != 0:
+                raise AssertionError("native GEMV failed in benchmark")
+        native_us = (time.perf_counter_ns() - t) / loops / 1000
+        native_fields = {"native_fused_dot_us": round(native_us, 3),
+                         "native_float64_oracle_match": True,
+                         "native_benchmark_loops": loops,
+                         "native_model_inference": False}
+
     return {
         "tensor": name, "row_start": row_start,
         "source_gguf_range": [first, last],
@@ -176,6 +209,7 @@ def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
         "scale_zlib9_bytes": len(zlib.compress(scales.tobytes(), 9)),
         "mantissa_bytes": int(blocks.nbytes),
         "mantissa_zlib9_bytes": len(zlib.compress(blocks.tobytes(), 9)),
+        **native_fields,
         "zlib9_bytes": len(zlib.compress(packed_gguf, 9)),
         "xz6_bytes": len(lzma.compress(packed_gguf, preset=6)),
         "zipburger_over_raw": round(carrier.frame_bytes / len(packed_gguf), 4),
@@ -193,12 +227,16 @@ def main(argv=None):
                     help="repeat for a few names in the pinned manifest")
     ap.add_argument("--rows", type=int, default=48)
     ap.add_argument("--groups", type=int, default=4)
+    ap.add_argument("--native-lib",
+                    help="optional compiled CPU-only R04 C11 shared library")
     args = ap.parse_args(argv)
+    native_lib = ctypes.CDLL(args.native_lib) if args.native_lib else None
     starts = args.row_start if args.row_start is not None else [0, 4096]
     names = args.tensor if args.tensor is not None else list(TENSORS)
     if not starts or not names or len(starts) * len(names) > 24:
         ap.error("requires 1..24 total bounded samples")
-    results = [benchmark(name, row, rows=args.rows, groups=args.groups)
+    results = [benchmark(name, row, rows=args.rows, groups=args.groups,
+                         native_lib=native_lib)
                for name in names for row in starts]
     report = {
         "schema": "zipburger-mxfp4-real-public-gguf-ranges/1",
