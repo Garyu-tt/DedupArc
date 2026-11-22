@@ -160,7 +160,8 @@ std::string read_prompt(const std::string & path) {
     return prompt;
 }
 void write_capture(const std::string & path, const Capture & c,
-                   const std::vector<int32_t> & preds) {
+                   const std::vector<int32_t> & preds,
+                   const std::vector<llama_token> & token_ids) {
     for (int i = 0; i < kLayers; ++i) {
         const auto & l = c.layers[i];
         const size_t h = static_cast<size_t>(c.tokens) * c.hidden;
@@ -172,7 +173,8 @@ void write_capture(const std::string & path, const Capture & c,
                                      std::to_string(i));
         }
     }
-    if (preds.size() != static_cast<size_t>(c.tokens)) {
+    if (preds.size() != static_cast<size_t>(c.tokens) ||
+        token_ids.size() != static_cast<size_t>(c.tokens)) {
         throw std::runtime_error("incomplete per-token predictions");
     }
     std::ifstream present(path, std::ios::binary);
@@ -191,6 +193,8 @@ void write_capture(const std::string & path, const Capture & c,
         write_vec(f, l.route_weights);
     }
     write_vec(f, preds);
+    // Token ids are potentially reversible; keep capture strictly local/private.
+    for (const auto token : token_ids) u32(f, static_cast<uint32_t>(token));
     f.flush();
     if (!f) throw std::runtime_error("capture output write failed");
 }
@@ -283,7 +287,7 @@ int main(int argc, char ** argv) {
             top1.push_back(static_cast<int32_t>(best - logits));
         }
         // Write only when every layer and every required observation exists.
-        write_capture(output_file, capture, top1);
+        write_capture(output_file, capture, top1, tokens);
         std::cout << "R10 capture complete: " << n
                   << " tokens, 24 layers, hidden=" << capture.hidden
                   << ". Private binary output only; no prompt content printed.\n";
