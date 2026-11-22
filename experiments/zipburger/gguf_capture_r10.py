@@ -211,7 +211,7 @@ def read_complete_batch(directory):
     if not marker.is_file() or marker.is_symlink():
         raise ValueError("R11 incomplete capture batch: no completion marker")
     contents = marker.read_text(encoding="ascii")
-    match = re.fullmatch(r"ZBR11 COMPLETE ([1-9][0-9]?)\\n", contents)
+    match = re.fullmatch(r"ZBR11 COMPLETE ([1-9][0-9]?)\n", contents)
     if match is None:
         raise ValueError("invalid R11 batch completion marker")
     files = sorted(root.glob("*.zbr10"))
