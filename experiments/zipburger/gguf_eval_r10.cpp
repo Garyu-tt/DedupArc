@@ -72,7 +72,9 @@ bool cb_eval(ggml_tensor * t, bool ask, void * data) {
     auto & capture = *static_cast<Capture *>(data);
     Kind kind = Kind::skip;
     int layer = -1;
-    if (!target(t->name, kind, layer)) return true;
+    // ask=true: subscribe only to the five bounded labels per layer.
+    // ask=false: returning false cancels the actual inference.
+    if (!target(t->name, kind, layer)) return !ask;
     if (ask) return true;
     if (capture.failed) return false;
     try {
