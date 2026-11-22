@@ -54,7 +54,7 @@ bool target(const char * name, Kind & kind, int & layer) {
         const size_t n = std::strlen(p.first);
         if (std::strncmp(name, p.first, n) != 0) continue;
         const char * suffix = name + n;
-        if (*suffix < '0' || *suffix > '9') return false;
+        if (*suffix < '0' || *suffix > '9' || std::strlen(suffix) > 2) return false;
         unsigned value = 0;
         for (const char * q = suffix; *q; ++q) {
             if (*q < '0' || *q > '9') return false;
