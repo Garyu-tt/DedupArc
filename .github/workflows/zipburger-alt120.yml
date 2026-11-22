@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'experiments/zipburger/alt120b_real_r06.py'
+      - 'experiments/zipburger/alt120b_entropy_r07.py'
       - 'tests/test_zipburger_alt120_r06.py'
+      - 'tests/test_zipburger_alt120_entropy_r07.py'
       - '.github/workflows/zipburger-alt120.yml'
   workflow_dispatch:
 
@@ -27,6 +29,10 @@ jobs:
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
         run: python -m unittest discover -s tests -p 'test_zipburger_alt120_r06.py' -v
+      - name: Offline entropy, strided-pattern and exact-block diagnostic tests
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_alt120_entropy_r07.py' -v
       - name: Real immutable ALT-120B public GGUF bounded range study
         env:
           OPENBLAS_NUM_THREADS: '1'
