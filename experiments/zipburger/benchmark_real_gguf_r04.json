@@ -1,0 +1,80 @@
+{
+  "expected_whole_file_sha256_from_upstream_metadata": "27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+  "gguf_bytes": 12109566624,
+  "gguf_filename": "gpt-oss-20b-MXFP4.gguf",
+  "gpu_involved": false,
+  "model_inference_performed": false,
+  "pinned_revision": "41e8a94d15d62070b36cf4553a0250717ecf46b8",
+  "real_public_checkpoint_bytes": true,
+  "results": [
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 1.396,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 48.31,
+      "raw_bytes": 3264,
+      "row_start": 0,
+      "sample_sha256": "bdf168f07de60d10025ca1dab2a0eaef7530ecec439b385b6cef839b111758a9",
+      "source_gguf_range": [
+        1272291744,
+        1272363721
+      ],
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "xz6_bytes": 3328,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0135,
+      "zipburger_r03_bytes": 3308,
+      "zlib9_bytes": 3239
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 1.328,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 34.141,
+      "raw_bytes": 3264,
+      "row_start": 0,
+      "sample_sha256": "b6d6fafc8d5563023c9b7c8e1971f7228dc962bdcfd388f5f35caadd19791bf0",
+      "source_gguf_range": [
+        1413665184,
+        1413737161
+      ],
+      "tensor": "blk.0.ffn_gate_exps.weight",
+      "xz6_bytes": 3284,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0135,
+      "zipburger_r03_bytes": 3308,
+      "zlib9_bytes": 3174
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 1.334,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 50.992,
+      "raw_bytes": 3264,
+      "row_start": 0,
+      "sample_sha256": "774613469973f1f05a6b12af12cbc6e4fffb6bdd0b2389a503a3b21cd563c288",
+      "source_gguf_range": [
+        1555407392,
+        1555479369
+      ],
+      "tensor": "blk.0.ffn_up_exps.weight",
+      "xz6_bytes": 3304,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0135,
+      "zipburger_r03_bytes": 3308,
+      "zlib9_bytes": 3199
+    }
+  ],
+  "schema": "zipburger-mxfp4-real-public-gguf-ranges/1",
+  "source_repo": "ggml-org/gpt-oss-20b-GGUF",
+  "whole_file_hash_recomputed": false,
+  "whole_model_compression_tested": false,
+  "provenance": {
+    "github_repo": "Garyu-tt/DedupArc",
+    "github_actions_run_id": 44965907649,
+    "github_actions_job_id": 137034758152,
+    "github_head_commit": "699a6d3be6edca17ac3f43acc9c4b1b8c791065b",
+    "retrieved": "2026-11-22",
+    "notes": "Actual pinned public GGUF ranges only, not the full model; full-file SHA from upstream metadata, not independently recomputed in this probe. Runtime timings are Python microbenchmarks, not GPT-OSS inference."
+  }
+}
