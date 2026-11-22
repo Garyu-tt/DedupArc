@@ -20,6 +20,7 @@ class ExpertArchiveR09Tests(unittest.TestCase):
             "schema": "zipburger-r09-expert-inputs-v1",
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "prompt_digest": hashlib.sha256(prompt).hexdigest(),
+            "token_sequence_sha256": [hashlib.sha256(prompt).hexdigest()],
             "checkpoint_digest": hashlib.sha256(b"checkpoint").hexdigest(),
             "source": source,
             "input_width": 512, "projections": ["up", "gate"],
@@ -56,6 +57,17 @@ class ExpertArchiveR09Tests(unittest.TestCase):
             cal, val = Path(tmp) / "cal.npz", Path(tmp) / "val.npz"
             self.make_archive(cal)
             self.make_archive(val)
+            with self.assertRaises(ValueError):
+                r.load_pair(cal, val)
+
+    def test_overlap_refused_even_when_corpus_manifests_differ(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cal, val = Path(tmp) / "cal.npz", Path(tmp) / "val.npz"
+            self.make_archive(cal)
+            self.make_archive(val, prompt=b"heldout")
+            manifest = json.loads(val.with_suffix(".json").read_text(encoding="utf-8"))
+            manifest["token_sequence_sha256"] = [hashlib.sha256(b"cal").hexdigest()]
+            val.with_suffix(".json").write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaises(ValueError):
                 r.load_pair(cal, val)
 
