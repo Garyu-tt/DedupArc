@@ -203,15 +203,39 @@ def save_bundle(paths, *, trace_path, checkpoint_sha256, source):
     return provenance
 
 
+def read_complete_batch(directory):
+    root = Path(directory)
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("R11 batch must be a real directory")
+    marker = root / "complete.marker"
+    if not marker.is_file() or marker.is_symlink():
+        raise ValueError("R11 incomplete capture batch: no completion marker")
+    contents = marker.read_text(encoding="ascii")
+    match = re.fullmatch(r"ZBR11 COMPLETE ([1-9][0-9]?)\\n", contents)
+    if match is None:
+        raise ValueError("invalid R11 batch completion marker")
+    files = sorted(root.glob("*.zbr10"))
+    n = int(match.group(1))
+    if (n != len(files) or not 1 <= n <= MAX_CAPTURES or
+            any(p.is_symlink() or not p.is_file() for p in files)
+            or [p.name for p in files] != [f"{i:03d}.zbr10" for i in range(n)]):
+        raise ValueError("R11 missing/modified native captures")
+    return files
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--capture", type=Path, action="append", required=True)
+    sources = parser.add_mutually_exclusive_group(required=True)
+    sources.add_argument("--capture", type=Path, action="append")
+    sources.add_argument("--capture-dir", type=Path,
+                         help="completed R11 batch directory with completion marker")
     parser.add_argument("--trace-npz", type=Path, required=True)
     parser.add_argument("--checkpoint-sha256", required=True)
     parser.add_argument("--source", required=True,
                         choices=("instrumented_teacher", "instrumented_candidate"))
     args = parser.parse_args(argv)
-    print(json.dumps(save_bundle(args.capture, trace_path=args.trace_npz,
+    paths = read_complete_batch(args.capture_dir) if args.capture_dir is not None else args.capture
+    print(json.dumps(save_bundle(paths, trace_path=args.trace_npz,
                                  checkpoint_sha256=args.checkpoint_sha256,
                                  source=args.source), indent=2))
     return 0
