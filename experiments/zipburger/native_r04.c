@@ -107,7 +107,7 @@ int zipburger_r04_gemv(const uint8_t *frame, size_t size,
                 const unsigned code = scale_code(index, ix_len, pos, bits);
                 if (code > 255) return -13;
                 if (mode == 1) {
-                    if (code > 255 - meta[0]) return -14;
+                    if (code > (unsigned)(255 - meta[0])) return -14;
                     e8m0 = (uint8_t)(meta[0] + code);
                 } else {
                     if (code >= meta_len) return -15;
