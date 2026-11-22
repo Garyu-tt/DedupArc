@@ -110,6 +110,24 @@ class GGUFNativeR10Tests(unittest.TestCase):
                 r.aggregate([a, b], checkpoint_sha256=checkpoint,
                             source="instrumented_teacher")
 
+
+    def test_r11_completed_batch_manifest_is_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaises(ValueError):
+                r.read_complete_batch(root)
+            file = root / "000.zbr10"
+            fixture(file, seed=10)
+            (root / "complete.marker").write_text("ZBR11 COMPLETE 1\\n", encoding="ascii")
+            # The first marker intentionally contains a literal backslash-n.
+            with self.assertRaises(ValueError):
+                r.read_complete_batch(root)
+            (root / "complete.marker").write_text("ZBR11 COMPLETE 1\n", encoding="ascii")
+            self.assertEqual(r.read_complete_batch(root), [file])
+            (root / "001.zbr10").write_bytes(b"unexpected partial output")
+            with self.assertRaises(ValueError):
+                r.read_complete_batch(root)
+
     def test_unattested_checkpoint_and_invalid_role_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             a = Path(tmp) / "a.zbr10"
