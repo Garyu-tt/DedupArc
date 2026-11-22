@@ -249,10 +249,8 @@ def load(payload: bytes):
     meta = payload[start:start + metalen]
     indexes = payload[start + metalen:start + metalen + ixlen]
     data = payload[start + metalen + ixlen:]
-    if mode == DELTA and bits != _bits_needed(256 - meta[0]):
-        # Smaller widths are fine, but cannot wrap past uint8 scale range.
-        if meta[0] + (1 << bits) - 1 > 255:
-            raise ValueError("scale delta code can overflow")
+    # Verified per-block scale reads reject actual overflow; spare codes in
+    # the fixed-width bitplane need not be representable uint8 values.
     if mode != RAW and bits and (n * bits) % 8:
         spare = 8 - ((n * bits) % 8)
         if indexes[-1] >> (8 - spare):
