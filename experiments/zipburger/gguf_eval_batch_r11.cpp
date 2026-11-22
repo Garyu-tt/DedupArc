@@ -30,6 +30,9 @@ std::vector<fs::path> prompt_files(const fs::path & directory) {
 } // namespace
 
 int main(int argc, char ** argv) {
+#if !defined(_WIN32)
+    umask(0077); // private output directory and all traced token IDs
+#endif
     try {
         std::string model_file, in_dir, out_dir;
         int threads = 2;
