@@ -1,6 +1,6 @@
 """Bounded HTTPS range benchmark of actual GPT-OSS-20B GGUF MXFP4 blocks.
 
-Reads ONLY six tiny ranges (< 0.5 MiB aggregate) from a pinned public GGUF.
+Reads ONLY bounded ranges (two tiny samples of up to nine tensors) from a pinned public GGUF.
 Never downloads a checkpoint, touches Mikoshi, or modifies inference services.
 This uses the GGUF v3 tensor offsets independently observed on VM200. Fail
 closed on non-206 responses, oversized reads, wrong Content-Range, redirects
@@ -38,6 +38,12 @@ TENSORS = {
     "blk.0.ffn_down_exps.weight": 1_259_283_456,
     "blk.0.ffn_gate_exps.weight": 1_400_656_896,
     "blk.0.ffn_up_exps.weight": 1_542_399_104,
+    "blk.1.ffn_down_exps.weight": 1_712_028_800,
+    "blk.1.ffn_gate_exps.weight": 1_853_402_240,
+    "blk.1.ffn_up_exps.weight": 1_995_144_448,
+    "blk.2.ffn_down_exps.weight": 2_164_774_144,
+    "blk.2.ffn_gate_exps.weight": 2_306_147_584,
+    "blk.2.ffn_up_exps.weight": 2_447_889_792,
 }
 MAX_RANGE_BYTES = 120_000
 
@@ -118,20 +124,20 @@ def sample(name: str, row_start=0, rows=48, groups=4, *, fetch=get_range):
     return blocks, scales, bytes(raw), (absolute_start, absolute_end)
 
 
-def benchmark(name, row_start=0, *, fetch=get_range):
+def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
     blocks, scales, packed_gguf, (first, last) = sample(
-        name, row_start, fetch=fetch)
+        name, row_start, rows=rows, groups=groups, fetch=fetch)
     start = time.perf_counter()
     carrier = pack(blocks, scales, max_roots=8, max_candidates=16)
     pack_ms = (time.perf_counter() - start) * 1000
     stored = load(carrier.payload)
     rb, rs = stored.restore()
-    reconstructed = np.empty((48, 4, 17), dtype=np.uint8)
+    reconstructed = np.empty((rows, groups, 17), dtype=np.uint8)
     reconstructed[:, :, 0] = rs
     reconstructed[:, :, 1:] = rb
     if reconstructed.tobytes() != packed_gguf:
         raise AssertionError("R03 failed original GGUF bitwise restoration")
-    x = np.random.default_rng(331).standard_normal(128)
+    x = np.random.default_rng(331).standard_normal(groups * 32)
     start = time.perf_counter()
     direct = stored.dot(x)
     dot_ms = (time.perf_counter() - start) * 1000
@@ -159,12 +165,15 @@ def main(argv=None):
                     help="repeat for multiple row positions (default: 0 and 4096)")
     ap.add_argument("--tensor", action="append",
                     help="repeat for a few names in the pinned manifest")
+    ap.add_argument("--rows", type=int, default=48)
+    ap.add_argument("--groups", type=int, default=4)
     args = ap.parse_args(argv)
     starts = args.row_start if args.row_start is not None else [0, 4096]
     names = args.tensor if args.tensor is not None else list(TENSORS)
-    if not starts or not names or len(starts) * len(names) > 12:
-        ap.error("requires 1..12 total bounded samples")
-    results = [benchmark(name, row) for name in names for row in starts]
+    if not starts or not names or len(starts) * len(names) > 24:
+        ap.error("requires 1..24 total bounded samples")
+    results = [benchmark(name, row, rows=args.rows, groups=args.groups)
+               for name in names for row in starts]
     report = {
         "schema": "zipburger-mxfp4-real-public-gguf-ranges/1",
         "source_repo": "ggml-org/gpt-oss-20b-GGUF",
