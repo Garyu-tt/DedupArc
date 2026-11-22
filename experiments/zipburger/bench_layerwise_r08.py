@@ -13,13 +13,18 @@ import numpy as np
 from .palette3_r08 import evaluate_expert
 
 
-def benchmark_one(name, blocks, scales, *, row_start=0, real=False):
+def benchmark_one(name, blocks, scales, *, row_start=0, real=False,
+                  calibration=None, validation=None):
     from .mxfp4_palette_r04 import pack as lossless_pack
     seed = 2108 + row_start + sum(ord(ch) for ch in name)
     rng = np.random.default_rng(seed)
     width = scales.shape[1] * 32
-    calibration = rng.standard_normal((32, width))
-    validation = rng.standard_normal((16, width))
+    real_teacher_inputs = calibration is not None and validation is not None
+    if (calibration is None) != (validation is None):
+        raise ValueError("both calibration and held-out vectors are required")
+    if not real_teacher_inputs:
+        calibration = rng.standard_normal((32, width))
+        validation = rng.standard_normal((16, width))
     started = time.perf_counter()
     selected, result = evaluate_expert(
         name, blocks, scales, calibration, validation,
@@ -38,7 +43,8 @@ def benchmark_one(name, blocks, scales, *, row_start=0, real=False):
         "stored_saving_pct_after_quality_gate": round(
             100 * (1 - selected.frame_bytes / result["raw_mxfp4_bytes"]), 5),
         "benchmark_elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
-        "real_model_activations": False,
+        "real_model_activations_operator_attested": bool(real_teacher_inputs),
+        "real_model_activations_independently_verified": False,
         "model_inference_or_agentic_equivalence": False,
     })
     return result
@@ -67,13 +73,39 @@ def main(argv=None):
     parser.add_argument("--real", action="store_true",
                         help="Read bounded public pinned 20B GGUF ranges")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--teacher-calibration", type=Path)
+    parser.add_argument("--teacher-validation", type=Path)
     args = parser.parse_args(argv)
-    items = [benchmark_one(name, b, s, row_start=row_start, real=args.real)
-             for name, row_start, b, s in samples(args.real)]
+    if (args.teacher_calibration is None) != (args.teacher_validation is None):
+        parser.error("provide both calibration and validation archives")
+    if args.teacher_calibration is not None and not args.real:
+        parser.error("--real is required for real teacher activation probes")
+    cal = val = None
+    if args.teacher_calibration is not None:
+        from .expert_trace_input_r09 import load_pair, matched_vectors
+        cal, val = load_pair(args.teacher_calibration, args.teacher_validation)
+    items, skipped = [], []
+    for name, row_start, b, s in samples(args.real):
+        pair = None
+        if cal is not None:
+            try:
+                pair = matched_vectors(cal, val, tensor=name, row_start=row_start)
+            except ValueError:
+                pair = None
+            if pair is None:
+                skipped.append({"tensor": name, "row_start": row_start,
+                                "reason": "no supported 8+8 routed up/gate input samples"})
+                continue
+        items.append(benchmark_one(name, b, s, row_start=row_start,
+                                   real=args.real,
+                                   calibration=None if pair is None else pair[0],
+                                   validation=None if pair is None else pair[1]))
     result = {
         "experiment": "ZipBurger R08",
         "real_20b_weight_fragments": args.real,
-        "real_20b_activations": False,
+        "real_20b_activations_operator_attested": bool(cal is not None),
+        "real_20b_activations_independently_verified": False,
+        "skipped_samples": skipped,
         "whole_model_compression_proven": False,
         "agentic_equivalence_proven": False,
         "original_bytes": sum(x["raw_mxfp4_bytes"] for x in items),
