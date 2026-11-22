@@ -149,6 +149,7 @@ def collect(model, tokenizer, prompts, *, checkpoint_sha256, source,
             pred = pred.detach().cpu().numpy().astype(np.int64)
             n = pred.size
             if (len(current_hidden) != LAYERS or len(current_route) != LAYERS
+                    or len({layer for layer, _ in current_expert}) != LAYERS
                     or n > max_tokens):
                 raise RuntimeError("24-layer capture incomplete; backend hooks may be bypassed")
             for i in range(LAYERS):
@@ -208,8 +209,22 @@ def main(argv=None):
         source=args.source, device=args.device)
     manifest = save(trace, args.trace_npz)
     if expert_inputs:
-        np.savez_compressed(args.trace_npz.with_name(args.trace_npz.stem + "_expert_upgate.npz"),
-                            **expert_inputs)
+        expert_file = args.trace_npz.with_name(args.trace_npz.stem + "_expert_upgate.npz")
+        np.savez_compressed(expert_file, **expert_inputs)
+        expert_meta = {
+            "schema": "zipburger-r09-expert-inputs-v1",
+            "sha256": hashlib.sha256(expert_file.read_bytes()).hexdigest(),
+            "prompt_digest": manifest["prompt_digest"],
+            "checkpoint_digest": manifest["checkpoint_digest"],
+            "source": args.source,
+            "input_width": TILE_INPUT_WIDTH,
+            "projections": ["up", "gate"],
+            "contains_down_projection_inputs": False,
+            "real_teacher_activations_claim": args.source == "instrumented_teacher",
+            "verified_full_model_agenticity": False,
+        }
+        expert_file.with_suffix(".json").write_text(json.dumps(expert_meta, sort_keys=True, indent=2) + "\n",
+                                                    encoding="utf-8")
     print(json.dumps({**manifest, "expert_upgate_groups": len(expert_inputs),
                       "down_projection_inputs_recorded": False}, indent=2))
 
