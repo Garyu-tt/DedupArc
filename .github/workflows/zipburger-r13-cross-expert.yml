@@ -1,0 +1,47 @@
+name: ZipBurger R13 real 20B MoE expert redundancy survey
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/zipburger/cross_expert_r13.py'
+      - 'tests/test_zipburger_cross_expert_r13.py'
+      - '.github/workflows/zipburger-r13-cross-expert.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zipburger-r13-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-research-bounded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26,<3'
+      - name: Independent offline cross-expert regression fixtures
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_cross_expert_r13.py' -v
+      - name: Sample only small ranges from pinned public 20B GGUF
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: >-
+          python -m experiments.zipburger.cross_expert_r13
+          --real --experts 4 > r13_real20b.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zipburger-r13-20b-expert-redundancy
+          path: r13_real20b.json
+          if-no-files-found: error
+          retention-days: 14
