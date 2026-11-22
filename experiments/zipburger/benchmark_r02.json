@@ -1,0 +1,72 @@
+[
+  {
+    "corpus": "two-shared-neurons-sparse-residuals",
+    "raw_bytes": 53248,
+    "zipburger_r01_bytes": 7320,
+    "zipburger_r02_bytes": 5454,
+    "zlib9_bytes": 1812,
+    "root_neurons": 8,
+    "links": 414,
+    "residuals": 319,
+    "literal_rows": 0,
+    "r02_pack_ms": 527.56,
+    "exact_integer_gemv": true,
+    "exact_direct_cell_read": true,
+    "exact_roundtrip": true
+  },
+  {
+    "corpus": "random-int8",
+    "raw_bytes": 53248,
+    "zipburger_r01_bytes": 53296,
+    "zipburger_r02_bytes": 53304,
+    "zlib9_bytes": 53274,
+    "root_neurons": 0,
+    "links": 0,
+    "residuals": 0,
+    "literal_rows": 208,
+    "r02_pack_ms": 109.24,
+    "exact_integer_gemv": true,
+    "exact_direct_cell_read": true,
+    "exact_roundtrip": true
+  },
+  {
+    "corpus": "zeros",
+    "raw_bytes": 53248,
+    "zipburger_r01_bytes": 1552,
+    "zipburger_r02_bytes": 1768,
+    "zlib9_bytes": 74,
+    "root_neurons": 1,
+    "links": 208,
+    "residuals": 0,
+    "literal_rows": 0,
+    "r02_pack_ms": 7.53,
+    "exact_integer_gemv": true,
+    "exact_direct_cell_read": true,
+    "exact_roundtrip": true
+  },
+  {
+    "corpus": "mxfp4-byte-like-control",
+    "raw_bytes": 53248,
+    "zipburger_r01_bytes": 53296,
+    "zipburger_r02_bytes": 53304,
+    "zlib9_bytes": 23858,
+    "root_neurons": 0,
+    "links": 0,
+    "residuals": 0,
+    "literal_rows": 208,
+    "r02_pack_ms": 108.12,
+    "exact_integer_gemv": true,
+    "exact_direct_cell_read": true,
+    "exact_roundtrip": true
+  },
+  {
+    "corpus": "zlib-coded-structured-data",
+    "raw_bytes": 1812,
+    "zipburger_r02_bytes": 2104,
+    "zlib9_bytes": 1685,
+    "root_neurons": 0,
+    "links": 0,
+    "exact_roundtrip": true,
+    "note": "entropy-coded bytes were bitcast into int8 and preserved; no lossless gain claimed"
+  }
+]

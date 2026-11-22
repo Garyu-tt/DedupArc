@@ -1,0 +1,53 @@
+[
+  {
+    "corpus": "shared-roots+sparse-edits",
+    "raw_bytes": 67584,
+    "zipburger_bytes": 6240,
+    "zlib9_bytes": 9275,
+    "roots": 8,
+    "linked_rows": 264,
+    "residual_edges": 640,
+    "pack_ms": 118.6,
+    "exact_roundtrip": true,
+    "exact_integer_gemv": true,
+    "trainable_adapter_bytes_fp32": 8320,
+    "torch_core_buffer_bytes_estimate": 24160,
+    "serialized_frame_plus_fp32_adapters": 14560
+  },
+  {
+    "corpus": "shared-roots+dense-edits",
+    "raw_bytes": 67584,
+    "zipburger_bytes": 67632,
+    "zlib9_bytes": 40093,
+    "roots": 0,
+    "linked_rows": 0,
+    "residual_edges": 65131,
+    "pack_ms": 47.8,
+    "exact_roundtrip": true,
+    "exact_integer_gemv": true
+  },
+  {
+    "corpus": "random-int8",
+    "raw_bytes": 67584,
+    "zipburger_bytes": 67632,
+    "zlib9_bytes": 67615,
+    "roots": 0,
+    "linked_rows": 0,
+    "residual_edges": 67317,
+    "pack_ms": 50.0,
+    "exact_roundtrip": true,
+    "exact_integer_gemv": true
+  },
+  {
+    "corpus": "zeros",
+    "raw_bytes": 67584,
+    "zipburger_bytes": 1888,
+    "zlib9_bytes": 87,
+    "roots": 1,
+    "linked_rows": 264,
+    "residual_edges": 0,
+    "pack_ms": 4.6,
+    "exact_roundtrip": true,
+    "exact_integer_gemv": true
+  }
+]

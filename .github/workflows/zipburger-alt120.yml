@@ -1,0 +1,40 @@
+name: ALT 120B MXFP4 bounded real-weight research
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/zipburger/alt120b_real_r06.py'
+      - 'experiments/zipburger/alt120b_entropy_r07.py'
+      - 'tests/test_zipburger_alt120_r06.py'
+      - 'tests/test_zipburger_alt120_entropy_r07.py'
+      - '.github/workflows/zipburger-alt120.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  alt120b-public-samples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install light CPU dependencies
+        run: python -m pip install 'numpy>=1.26,<3'
+      - name: Offline untrusted GGUF header and fake MXFP4 fixture tests
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_alt120_r06.py' -v
+      - name: Offline entropy, strided-pattern and exact-block diagnostic tests
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_alt120_entropy_r07.py' -v
+      - name: Real immutable ALT-120B public GGUF bounded range study
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: python -m experiments.zipburger.alt120b_real_r06

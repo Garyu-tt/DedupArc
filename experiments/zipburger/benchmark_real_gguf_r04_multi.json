@@ -1,0 +1,373 @@
+{
+  "expected_whole_file_sha256_from_upstream_metadata": "27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+  "gguf_bytes": 12109566624,
+  "gguf_filename": "gpt-oss-20b-MXFP4.gguf",
+  "gpu_involved": false,
+  "model_inference_performed": false,
+  "pinned_revision": "41e8a94d15d62070b36cf4553a0250717ecf46b8",
+  "real_public_checkpoint_bytes": true,
+  "results": [
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.505,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 50.712,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "03055447c8eb28c3a72a7c9658ab40ac32134f8387f5581d241a72745b639ebd",
+      "source_gguf_range": [
+        1272291744,
+        1272363925
+      ],
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "xz6_bytes": 12972,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12725
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.499,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 36.866,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "6420c0b6fa7c422dec1d94d770810f13dd9b060fac22485cfa9d6cbe48c4c3d6",
+      "source_gguf_range": [
+        1278558624,
+        1278630805
+      ],
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "xz6_bytes": 12964,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12688
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 5.463,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 42.281,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "1e38ae1a396d269b82d4df76e88e447c0f506336c5b1fa73979c139c516060a4",
+      "source_gguf_range": [
+        1413665184,
+        1413737365
+      ],
+      "tensor": "blk.0.ffn_gate_exps.weight",
+      "xz6_bytes": 12776,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12502
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.504,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.205,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "92865783b3bb976619d29e4d17e712ccba5fe9e407b4b45d1aebe70207f5ec73",
+      "source_gguf_range": [
+        1419932064,
+        1420004245
+      ],
+      "tensor": "blk.0.ffn_gate_exps.weight",
+      "xz6_bytes": 12648,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12383
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.511,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 53.631,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "f6f325f22e79cfa43b150d2421129a466b87890207ca588ba897c36c95ab8e2e",
+      "source_gguf_range": [
+        1555407392,
+        1555479573
+      ],
+      "tensor": "blk.0.ffn_up_exps.weight",
+      "xz6_bytes": 12848,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12583
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.488,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 39.128,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "8ee4a9ca195f0e8f0d0ca55b8bcbdcaa653314375058557492859efff1add5bc",
+      "source_gguf_range": [
+        1561674272,
+        1561746453
+      ],
+      "tensor": "blk.0.ffn_up_exps.weight",
+      "xz6_bytes": 12676,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12368
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.502,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.261,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "b2f76ed21c0b150de5ae4e9319e076b17a6602ba7613ee8ce84b499d16e88886",
+      "source_gguf_range": [
+        1725037088,
+        1725109269
+      ],
+      "tensor": "blk.1.ffn_down_exps.weight",
+      "xz6_bytes": 12920,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12679
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.631,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 42.278,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "2ae24563ba527dd549c32ffb38641c976c19dcf8d55cfae3f258af3e1c21363d",
+      "source_gguf_range": [
+        1731303968,
+        1731376149
+      ],
+      "tensor": "blk.1.ffn_down_exps.weight",
+      "xz6_bytes": 12904,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12667
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.587,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.097,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "1881d188a04ab0d42d90be0c8da7bfdce242cbaf948d5d9d36b2481cece6caf7",
+      "source_gguf_range": [
+        1866410528,
+        1866482709
+      ],
+      "tensor": "blk.1.ffn_gate_exps.weight",
+      "xz6_bytes": 12820,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12570
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.489,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 36.893,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "675968e0c6445ced681a8964a1d48e2d251cca12eb8a590c0f4a82651b24c8c8",
+      "source_gguf_range": [
+        1872677408,
+        1872749589
+      ],
+      "tensor": "blk.1.ffn_gate_exps.weight",
+      "xz6_bytes": 12844,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12598
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.507,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 38.049,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "0f952e8c765d9a7d1f231ddf5d749a26b921df4f8d0bc679dd275caf4b1af004",
+      "source_gguf_range": [
+        2008152736,
+        2008224917
+      ],
+      "tensor": "blk.1.ffn_up_exps.weight",
+      "xz6_bytes": 12824,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12558
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.551,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.199,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "5e95268deec31947a625dfb6ee73ce5fe1e065f1f7d9d3e2a43f32a1912e8e5c",
+      "source_gguf_range": [
+        2014419616,
+        2014491797
+      ],
+      "tensor": "blk.1.ffn_up_exps.weight",
+      "xz6_bytes": 12804,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12536
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.524,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 50.634,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "a0c054f49633dc36f915f0235989aa2e76e92598957fc26ffd079186ed47fb27",
+      "source_gguf_range": [
+        2177782432,
+        2177854613
+      ],
+      "tensor": "blk.2.ffn_down_exps.weight",
+      "xz6_bytes": 12928,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12664
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.781,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 44.346,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "ca38451d49925e03ebe315c89766730dc3bb7bd8b51ab6ef60005a7f241ed231",
+      "source_gguf_range": [
+        2184049312,
+        2184121493
+      ],
+      "tensor": "blk.2.ffn_down_exps.weight",
+      "xz6_bytes": 12920,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12660
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.56,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.638,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "19e393d210abce3297f2811512c3931965863bab8dbbe6c57377601dad446a90",
+      "source_gguf_range": [
+        2319155872,
+        2319228053
+      ],
+      "tensor": "blk.2.ffn_gate_exps.weight",
+      "xz6_bytes": 12876,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12610
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.465,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 36.962,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "ce188c3db21b93551fc42e77dcb237c674a65f4a57102bea7e6610c8aeb05f13",
+      "source_gguf_range": [
+        2325422752,
+        2325494933
+      ],
+      "tensor": "blk.2.ffn_gate_exps.weight",
+      "xz6_bytes": 12812,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12552
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.506,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.78,
+      "raw_bytes": 13056,
+      "row_start": 0,
+      "sample_sha256": "d180e03c1c696cd7db12cf6ca8dfd150a610bdb696a647a496002e523399e9d0",
+      "source_gguf_range": [
+        2460898080,
+        2460970261
+      ],
+      "tensor": "blk.2.ffn_up_exps.weight",
+      "xz6_bytes": 12856,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12576
+    },
+    {
+      "bitwise_gguf_restoration": true,
+      "direct_dot_ms": 3.496,
+      "float64_direct_dot_reference_match": true,
+      "pack_ms": 29.867,
+      "raw_bytes": 13056,
+      "row_start": 4096,
+      "sample_sha256": "b5db862867b82e8c34554a82337b2259c9a33710fd7b1fc537179cc0720a2e5a",
+      "source_gguf_range": [
+        2467164960,
+        2467237141
+      ],
+      "tensor": "blk.2.ffn_up_exps.weight",
+      "xz6_bytes": 12780,
+      "zipburger_mode": "raw-fallback",
+      "zipburger_over_raw": 1.0034,
+      "zipburger_r03_bytes": 13100,
+      "zlib9_bytes": 12488
+    }
+  ],
+  "schema": "zipburger-mxfp4-real-public-gguf-ranges/1",
+  "source_repo": "ggml-org/gpt-oss-20b-GGUF",
+  "whole_file_hash_recomputed": false,
+  "whole_model_compression_tested": false,
+  "provenance": {
+    "github_repo": "Garyu-tt/DedupArc",
+    "workflow_run_id": 44966037965,
+    "workflow_job_id": 137035169214,
+    "head_sha": "56d9652b77c6925559e090c2d1477e111f3a3cc4",
+    "limitations": "Only 18 small sampled byte ranges from a pinned public GGUF were fetched, not entire tensors/checkpoint; model file full SHA not recomputed; Python float64 direct GEMV is not LLM equivalence, GPU throughput, or production compression."
+  },
+  "aggregate": {
+    "samples": 18,
+    "raw": 235008,
+    "zip": 235800,
+    "zlib": 226407,
+    "xz": 231172,
+    "ratio_zip_over_raw": 1.0033700980392157,
+    "ratio_zlib_over_raw": 0.9634012459150327
+  }
+}

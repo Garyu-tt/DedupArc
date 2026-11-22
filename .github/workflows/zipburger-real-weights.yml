@@ -1,0 +1,43 @@
+name: ZipBurger real public GGUF MXFP4 range probe
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/zipburger/real_mxfp4_ranges_r04.py'
+      - '.github/workflows/zipburger-real-weights.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-real-mxfp4-slices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install minimal dependencies
+        run: python -m pip install 'numpy>=1.26,<3'
+      - name: Compile bounded pinned reader
+        run: python -m py_compile experiments/zipburger/real_mxfp4_ranges_r04.py
+      - name: Run offline protocol and fixture tests
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_real_ranges_r04.py' -v
+      - name: Compile allocation-free C11 CPU GEMV kernel
+        run: |
+          cc -O3 -fPIC -shared -std=c11 -Wall -Wextra -Werror \
+            experiments/zipburger/native_r04.c \
+            -o "$RUNNER_TEMP/libzipburger_r04.so" -lm
+          echo "ZIPBURGER_NATIVE_LIB=$RUNNER_TEMP/libzipburger_r04.so" >> "$GITHUB_ENV"
+      - name: Read only bounded official GGUF ranges; validate packed bits and C11 GEMV
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: >-
+          python -m experiments.zipburger.real_mxfp4_ranges_r04
+          --row-start 0 --row-start 4096 --rows 48 --groups 16
+          --native-lib "$ZIPBURGER_NATIVE_LIB"
