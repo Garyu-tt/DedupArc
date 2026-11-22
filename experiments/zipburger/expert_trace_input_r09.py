@@ -69,7 +69,7 @@ def read_archive(path):
     return manifest, result
 
 
-def load_pair(calibration_path, validation_path):
+def load_pair(calibration_path, validation_path, *, return_metadata=False):
     c_meta, cal = read_archive(calibration_path)
     v_meta, val = read_archive(validation_path)
     if c_meta["checkpoint_digest"] != v_meta["checkpoint_digest"]:
@@ -78,7 +78,7 @@ def load_pair(calibration_path, validation_path):
         raise ValueError("calibration and validation prompt manifests identical")
     if set(c_meta["token_sequence_sha256"]) & set(v_meta["token_sequence_sha256"]):
         raise ValueError("calibration and validation share tokenized prompts")
-    return cal, val
+    return (cal, val, c_meta, v_meta) if return_metadata else (cal, val)
 
 
 def matched_vectors(cal, val, *, tensor, row_start):
