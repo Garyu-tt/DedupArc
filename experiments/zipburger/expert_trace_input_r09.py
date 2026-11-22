@@ -40,6 +40,12 @@ def read_archive(path):
         value = manifest.get(digest)
         if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
             raise ValueError("invalid archive digest")
+    token_hashes = manifest.get("token_sequence_sha256")
+    if (not isinstance(token_hashes, list) or not 1 <= len(token_hashes) <= 8
+            or any(not isinstance(x, str) or not re.fullmatch(r"[0-9a-f]{64}", x)
+                   for x in token_hashes)
+            or len(set(token_hashes)) != len(token_hashes)):
+        raise ValueError("missing/invalid tokenized prompt fingerprints")
     with zipfile.ZipFile(p) as archive:
         names = archive.namelist()
         if not 1 <= len(names) <= 24 * 32:
@@ -69,7 +75,9 @@ def load_pair(calibration_path, validation_path):
     if c_meta["checkpoint_digest"] != v_meta["checkpoint_digest"]:
         raise ValueError("different teacher checkpoints")
     if c_meta["prompt_digest"] == v_meta["prompt_digest"]:
-        raise ValueError("calibration and validation prompts must be disjoint")
+        raise ValueError("calibration and validation prompt manifests identical")
+    if set(c_meta["token_sequence_sha256"]) & set(v_meta["token_sequence_sha256"]):
+        raise ValueError("calibration and validation share tokenized prompts")
     return cal, val
 
 
