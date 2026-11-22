@@ -195,11 +195,24 @@ def main(argv=None):
         raise ValueError("prompt file must be a JSON array of strings")
     if not args.local_model_dir.is_dir():
         raise ValueError("checkpoint directory does not exist")
+    if not isinstance(prompts, list) or not 1 <= len(prompts) <= MAX_PROMPTS:
+        raise ValueError("invalid prompt count")
     from transformers import AutoModelForCausalLM, AutoTokenizer
     # Deliberately no network downloads, no trust_remote_code, no writebacks.
     tokenizer = AutoTokenizer.from_pretrained(str(args.local_model_dir),
                                               local_files_only=True,
                                               trust_remote_code=False)
+    # Reject same-tokenized prompts even if prompt text ordering differs.
+    prompt_token_hashes = []
+    for text in prompts:
+        if not isinstance(text, str) or not text or len(text) > 8192:
+            raise ValueError("invalid prompt text")
+        token_tensor = tokenizer(text, return_tensors="pt", truncation=True,
+                                 max_length=MAX_TOKENS_PER_PROMPT)["input_ids"]
+        token_bytes = token_tensor.detach().cpu().numpy().astype("<i8").tobytes()
+        prompt_token_hashes.append(hashlib.sha256(token_bytes).hexdigest())
+    if len(set(prompt_token_hashes)) != len(prompt_token_hashes):
+        raise ValueError("repeated tokenized prompt in corpus")
     model = AutoModelForCausalLM.from_pretrained(str(args.local_model_dir),
                                                 local_files_only=True,
                                                 trust_remote_code=False)
@@ -215,6 +228,7 @@ def main(argv=None):
             "schema": "zipburger-r09-expert-inputs-v1",
             "sha256": hashlib.sha256(expert_file.read_bytes()).hexdigest(),
             "prompt_digest": manifest["prompt_digest"],
+            "token_sequence_sha256": prompt_token_hashes,
             "checkpoint_digest": manifest["checkpoint_digest"],
             "source": args.source,
             "input_width": TILE_INPUT_WIDTH,
