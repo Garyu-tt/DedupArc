@@ -45,3 +45,14 @@ target_include_directories(zipburger_gguf_r10_graph_compute_test PRIVATE
     "${LLAMA_CPP_ROOT}/ggml/include"
 )
 target_link_libraries(zipburger_gguf_r10_graph_compute_test PRIVATE llama ggml)
+
+# R11 reuses the exact R10 callback implementation but holds one GGUF model
+# in RAM while executing multiple strictly isolated tiny prompts sequentially.
+add_executable(zipburger_gguf_batch_r11
+    "${CMAKE_CURRENT_LIST_DIR}/../gguf_eval_batch_r11.cpp"
+)
+target_include_directories(zipburger_gguf_batch_r11 PRIVATE
+    "${LLAMA_CPP_ROOT}/include"
+    "${LLAMA_CPP_ROOT}/ggml/include"
+)
+target_link_libraries(zipburger_gguf_batch_r11 PRIVATE llama ggml)
