@@ -1,0 +1,43 @@
+name: ZipBurger R08 20B bounded lossy expert experiment
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/zipburger/palette3_r08.py'
+      - 'experiments/zipburger/native_palette3_r08.c'
+      - 'experiments/zipburger/bench_layerwise_r08.py'
+      - 'tests/test_zipburger_*r08.py'
+      - '.github/workflows/zipburger-20b-r08.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-and-public-20b-ranges:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26,<3'
+      - name: Offline direct packed CPU and C11 tests
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_*r08.py' -v
+      - name: Synthetic quality-gate smoke
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m experiments.zipburger.bench_layerwise_r08
+      - name: Immutable public 20B GGUF bounded range study
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: >-
+          python -m experiments.zipburger.bench_layerwise_r08 --real
+          --output r08_20b_bounded_result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zipburger-r08-public20b-results
+          path: r08_20b_bounded_result.json

@@ -47,3 +47,16 @@ jobs:
         env:
           OPENBLAS_NUM_THREADS: '1'
         run: python -m experiments.zipburger.bench_r03
+
+      - name: R08 honest 3-bit vs exact on synthetic slices
+        if: matrix.python-version == '3.12'
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: python -m experiments.zipburger.bench_layerwise_r08
+      - name: R08 pinned public GPT-OSS-20B bounded real expert fragments
+        if: matrix.python-version == '3.12'
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: python -m experiments.zipburger.bench_layerwise_r08 --real

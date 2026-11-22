@@ -1,0 +1,112 @@
+name: ZipBurger R10 GGUF cb_eval probe syntax and offline fixtures
+
+on:
+  push:
+    branches:
+      - 'experiment/zipburger-r08-layerwise-20b'
+    paths:
+      - 'experiments/zipburger/gguf_eval_r10.cpp'
+      - 'experiments/zipburger/gguf_eval_batch_r11.cpp'
+      - 'experiments/zipburger/gguf_capture_r10.py'
+      - 'experiments/zipburger/r10_native/**'
+      - 'tests/test_zipburger_native_gguf_r10.py'
+      - 'tests/test_zipburger_meter_r10.py'
+      - 'experiments/zipburger/meter_r10.py'
+      - 'experiments/zipburger/coverage_r12.py'
+      - 'experiments/zipburger/phone_budget_r12.py'
+      - 'tests/test_zipburger_phone_budget_r12.py'
+      - 'experiments/zipburger/expert_trace_input_r09.py'
+      - 'tests/test_zipburger_coverage_r12.py'
+      - '.github/workflows/zipburger-r10-gguf.yml'
+  pull_request:
+    paths:
+      - 'experiments/zipburger/gguf_eval_r10.cpp'
+      - 'experiments/zipburger/gguf_capture_r10.py'
+      - 'tests/test_zipburger_native_gguf_r10.py'
+      - '.github/workflows/zipburger-r10-gguf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r10-native-source-and-python-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact upstream llama.cpp reference for syntax validation
+        uses: actions/checkout@v4
+        with:
+          repository: ggml-org/llama.cpp
+          ref: f505c30b92b5579e00532c9e75baa3aa74b70432
+          path: _upstream_llama
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Compile native probe against upstream public API headers
+        run: >-
+          c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only
+          -I _upstream_llama/include -I _upstream_llama/ggml/include
+          experiments/zipburger/gguf_eval_r10.cpp
+      - name: Link a standalone native GGUF probe against pinned llama.cpp
+        run: |
+          cmake -S experiments/zipburger/r10_native -B "$RUNNER_TEMP/zipburger-r10-build" \
+            -DLLAMA_CPP_ROOT="$PWD/_upstream_llama" \
+            -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF
+          cmake --build "$RUNNER_TEMP/zipburger-r10-build" \
+            --target zipburger_gguf_eval_r10 zipburger_gguf_batch_r11 zipburger_gguf_r10_callback_test zipburger_gguf_r10_graph_compute_test -j 2
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_callback_test"
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_graph_compute_test"
+          set +e
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10" 2> "$RUNNER_TEMP/r10_smoke.txt"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          grep -q 'usage: gguf_eval_r10' "$RUNNER_TEMP/r10_smoke.txt"
+          set +e
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_batch_r11" 2> "$RUNNER_TEMP/r11_smoke.txt"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          grep -q 'usage: zipburger_gguf_batch_r11' "$RUNNER_TEMP/r11_smoke.txt"
+      - name: Verify no runtime dependency on unbundled GGML/llama shared libraries
+        run: |
+          ldd "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10"             | tee "$RUNNER_TEMP/r10-ldd.txt"
+          if grep -Eq 'lib(llama|ggml)(-|\\.)([^ ]*)\\.so' "$RUNNER_TEMP/r10-ldd.txt"; then
+            echo "Unexpected shared llama/ggml dependency: artifact would be broken" >&2
+            exit 1
+          fi
+          (
+            cd "$RUNNER_TEMP/zipburger-r10-build"
+            sha256sum zipburger_gguf_eval_r10 > zipburger_gguf_eval_r10.sha256
+            sha256sum zipburger_gguf_batch_r11 > zipburger_gguf_batch_r11.sha256
+          )
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26,<3'
+      - name: Verify native GGUF trace decoding and all R09 gates offline
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: |
+          python -m unittest discover -s tests -p 'test_zipburger_native_gguf_r10.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_meter_r10.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_*r09.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_coverage_r12.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_phone_budget_r12.py' -v
+          python -m experiments.zipburger.phone_budget_r12 --target-gb 8
+
+      - name: Publish tested Linux x86-64 CPU probe only (NO model weights)
+        uses: actions/upload-artifact@v4
+        with:
+          name: zipburger-r10-linux-x86_64-cpu
+          path: |
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10.sha256
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_batch_r11
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_batch_r11.sha256
+          if-no-files-found: error
+          retention-days: 14
