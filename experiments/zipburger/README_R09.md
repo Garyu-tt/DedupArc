@@ -11,8 +11,8 @@ mobile device or other deployed system has been modified.
   each decoder layer and MoE router; collects routed *up/gate* expert inputs.
   Down-projection inputs are not accessible with this hook.
 - expert_trace_input_r09.py: checks separate calibration/validation archives,
-  rejects missing experts and aligns 2880-row expert boundaries. Different
-  corpus hashes alone do not prove the corpora are disjoint.
+  rejects missing experts and aligns 2880-row expert boundaries. Tokenized prompt
+  SHA256 fingerprints must be disjoint across corpora.
 - bench_layerwise_r08.py: optionally uses those observed up/gate activations
   with real bounded GGUF weight slices, skips unavailable/down observations;
   never substitutes random vectors when actual traces were requested.
@@ -105,3 +105,8 @@ python -m experiments.zipburger.bench_layerwise_r08
 Production gates remain: same-runtime original/candidate 20B logits,
 per-layer drift and router behavior, real multi-turn agent outcomes,
 full-checkpoint disk size, peak CPU RAM, speed and energy/power.
+
+Calibration/holdout separation is checked both by corpus manifest hashes and
+individual tokenized-prompt SHA256 fingerprints. Identical token sequences are
+rejected even if the original prompt texts differ. The model fingerprint is
+still operator-supplied and not an independent checkpoint attestation.
