@@ -72,3 +72,28 @@ compression, small expert cache, and learned decoding, with the
 original attention/router paths untouched until quality verified.
 Do not merge or deploy this as a solution to 8 GB until real
 GGUF/candidate and multi-step agentic performance are benchmarked.
+
+## CI-measured simulator result (NOT a model run)
+
+[GitHub Actions 45069454462](https://github.com/Garyu-tt/DedupArc/actions/runs/45069454462)
+succeeded, validating the LRU fixture tests and saving JSON reports
+for the same reproducible 64-token **synthetic uniform routing** trace.
+Both use a conservative 1 decimal GB extra runtime reserve:
+
+| Data | 8 GB budget | 10 GB budget |
+|---|---:|---:|
+| Simulated expert cache slots | 381 | 532 |
+| Cache hit fraction | 45.56% | 62.96% |
+| Raw weight bytes read over all 64 tokens | 44.218 GB | 30.087 GB |
+| Mean modeled raw weight reads per token | 691 MB | 470 MB |
+| Max modeled reads on any cold token | 1.269 GB | 1.269 GB |
+
+This is **not** a measurement of real storage I/O, thermal throttling,
+GPU/CPU activation costs or battery power, and uniform random expert
+choices are not actual 20B attention/router traces.
+
+The modeled I/O volume suggests blindly paging whole experts
+could become prohibitively expensive on a phone. Real R11 routes
+and smaller factorized expert codewords are required to evaluate
+whether paging + compressed-domain compute improves actual
+energy efficiency and interactive latency.
