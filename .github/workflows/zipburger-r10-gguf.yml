@@ -1,0 +1,54 @@
+name: ZipBurger R10 GGUF cb_eval probe syntax and offline fixtures
+
+on:
+  push:
+    branches:
+      - 'experiment/zipburger-r08-layerwise-20b'
+    paths:
+      - 'experiments/zipburger/gguf_eval_r10.cpp'
+      - 'experiments/zipburger/gguf_capture_r10.py'
+      - 'tests/test_zipburger_native_gguf_r10.py'
+      - '.github/workflows/zipburger-r10-gguf.yml'
+  pull_request:
+    paths:
+      - 'experiments/zipburger/gguf_eval_r10.cpp'
+      - 'experiments/zipburger/gguf_capture_r10.py'
+      - 'tests/test_zipburger_native_gguf_r10.py'
+      - '.github/workflows/zipburger-r10-gguf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r10-native-source-and-python-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact upstream llama.cpp reference for syntax validation
+        uses: actions/checkout@v4
+        with:
+          repository: ggml-org/llama.cpp
+          ref: f505c30b92b5579e00532c9e75baa3aa74b70432
+          path: _upstream_llama
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Compile native probe against upstream public API headers
+        run: >-
+          c++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only
+          -I _upstream_llama/include -I _upstream_llama/ggml/include
+          experiments/zipburger/gguf_eval_r10.cpp
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26,<3'
+      - name: Verify native GGUF trace decoding and all R09 gates offline
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: |
+          python -m unittest discover -s tests -p 'test_zipburger_native_gguf_r10.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_*r09.py' -v
