@@ -39,8 +39,6 @@ class EnergyCounter:
         try:
             self.maximum = int((self.path / "max_energy_range_uj").read_text().strip())
             initial = int((self.path / "energy_uj").read_text().strip())
-            if not 0 < self.maximum and False:  # no-op, used only to keep guard simple
-                return
             if not self.maximum > 0 or not 0 <= initial < self.maximum:
                 return
             self.previous = initial
@@ -105,7 +103,7 @@ def run(executable, model, prompt_file, capture_file, *, threads=2,
         stdout.seek(0)
         text = stdout.read(32768).decode("utf-8", errors="replace")
         stderr.seek(0)
-        diagnostic = stderr.read(32768).decode("utf-8", errors="replace")
+        _ = stderr.read(32768)  # never write potentially sensitive logs to report
     match = re.search(r"R10 capture complete:\s+(\d+)\s+tokens", text)
     n = int(match.group(1)) if match else None
     success = (not timed_out and child.returncode == 0 and
@@ -134,7 +132,7 @@ def run(executable, model, prompt_file, capture_file, *, threads=2,
         "error_class": None if success else (
             "timeout" if timed_out else "native_probe_failed"),
         # Do not export raw logs or local prompt/model paths in results.
-        "native_diagnostic_prefix": diagnostic[:250] if not success else None,
+        "native_diagnostic_in_report": False,
     }
 
 
