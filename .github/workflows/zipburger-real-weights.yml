@@ -27,8 +27,17 @@ jobs:
         env:
           OPENBLAS_NUM_THREADS: '1'
         run: python -m unittest discover -s tests -p 'test_zipburger_real_ranges_r04.py' -v
-      - name: Read only bounded official GGUF ranges; validate exact packed bits
+      - name: Compile allocation-free C11 CPU GEMV kernel
+        run: |
+          cc -O3 -fPIC -shared -std=c11 -Wall -Wextra -Werror \
+            experiments/zipburger/native_r04.c \
+            -o "$RUNNER_TEMP/libzipburger_r04.so" -lm
+          echo "ZIPBURGER_NATIVE_LIB=$RUNNER_TEMP/libzipburger_r04.so" >> "$GITHUB_ENV"
+      - name: Read only bounded official GGUF ranges; validate packed bits and C11 GEMV
         env:
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
-        run: python -m experiments.zipburger.real_mxfp4_ranges_r04 --row-start 0 --row-start 4096 --rows 48 --groups 16
+        run: >-
+          python -m experiments.zipburger.real_mxfp4_ranges_r04
+          --row-start 0 --row-start 4096 --rows 48 --groups 16
+          --native-lib "$ZIPBURGER_NATIVE_LIB"
