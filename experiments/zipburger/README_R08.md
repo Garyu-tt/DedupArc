@@ -88,3 +88,34 @@ tests and optional controlled public-range experiments.
 
 Neither the 8-10 GB phone target nor low-power 20B CPU operation has been
 achieved by R08. This implementation is a measurement foothold, not proof.
+
+## Independent real-20B fragment result (GitHub Actions)
+
+The first public pinned GGUF run (2026-11-22), [workflow run 45063130028](https://github.com/Garyu-tt/DedupArc/actions/runs/45063130028), completed successfully:
+
+| 18 real MXFP4 expert fragments, 48x16 blocks | Bytes |
+|---|---:|
+| Source packed weights | 235,008 |
+| Hypothetical 3-bit candidates | 180,576 |
+| Actual chosen storage after 18/18 strict gate failures | 226,386 |
+
+All 18 held-out **Gaussian input** tests failed the 4% relative L2 /
+0.999 cosine gate, reporting approximately 20.9%–25.8% relative output
+L2 error. The fallback chose exact R04 across all 18 fragments. The
+resulting 3.67% aggregate saving is from **R04 lossless scale bitpacking**,
+not useful deployment of the lossy R08 palette. This confirms that
+naive 3-bit lossy replacement is not a safe drop-in.
+
+## R08B low-rank correction
+
+`residual_adapter_r08.py` adds an **offline** activation-energy-weighted
+low-rank SVD correction of the 3-bit quantization error. For rank k, it
+stores FP16 left/right factors and applies `left @ (right @ input)`
+after direct 3-bit GEMV, without constructing the original full dense
+weights at inference. Its 8-byte research metadata and every FP16
+factor byte count in stored size. No rank can pass without meeting both
+the held-out accuracy gate **and** source-storage budget.
+
+The bounded 20B benchmark now compares rank 1 and rank 2 correction
+alongside no correction. This remains **tile training on Gaussian inputs**
+rather than real teacher-layer activation traces or full-model training.
