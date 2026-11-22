@@ -226,7 +226,7 @@ int main(int argc, char ** argv) {
         struct Backend { ~Backend() { llama_backend_free(); } } backend_guard;
         auto params = llama_model_default_params();
         params.n_gpu_layers = 0; // explicitly CPU-only
-        params.use_mmap = true;
+        // Upstream selects its own default load/mmap mode.
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(
             llama_model_load_from_file(model_file.c_str(), params), llama_model_free);
         if (!model || llama_model_n_layer(model.get()) != kLayers ||
