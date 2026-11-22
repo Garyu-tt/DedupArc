@@ -20,6 +20,9 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#if !defined(_WIN32)
+#include <sys/stat.h>
+#endif
 
 namespace {
 constexpr int kLayers = 24;
@@ -203,6 +206,9 @@ void write_capture(const std::string & path, const Capture & c,
 } // namespace
 
 int main(int argc, char ** argv) {
+#if !defined(_WIN32)
+    umask(0077); // private token IDs, prompts and hidden activations
+#endif
     std::string model_file, prompt_file, output_file;
     int threads = 2;
     try {
