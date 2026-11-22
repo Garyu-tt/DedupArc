@@ -109,3 +109,39 @@ Only after that measure full GGUF file bytes, peak RAM, tokens/sec and
 joules/token on the SAME processor or phone. The desired 8-10 GB phone
 target, near-idle energy draw and preservation of agenticity remain
 **unproven**. Draft research must not ship to production without QA.
+
+## Linked native CPU build and metering
+
+The standalone CMake wrapper uses an independent, explicitly pinned
+llama.cpp source tree. Example for an isolated developer checkout:
+
+    cmake -S experiments/zipburger/r10_native -B /private/build-r10 \
+      -DLLAMA_CPP_ROOT=/private/llama-r10 -DCMAKE_BUILD_TYPE=Release \
+      -DGGML_NATIVE=OFF
+    cmake --build /private/build-r10 --target zipburger_gguf_eval_r10 -j2
+
+The GitHub Actions R10 workflow now attempts to link this executable
+and runs a separate native callback subscription unit test. Passing
+unit tests with no model loaded is NOT a full 20B validation.
+
+For an eventual owner-authorized actual model run, meter CPU + RAM:
+
+    python -m experiments.zipburger.meter_r10 \
+      --exe /private/build-r10/zipburger_gguf_eval_r10 \
+      --model /private/models/gpt-oss-20b-MXFP4.gguf \
+      --prompt-file /private/prompts/cal01.txt \
+      --out /private/captures/cal01.zbr10 \
+      --report /private/captures/cal01_meter.json \
+      --threads 2 --timeout 900
+
+Optional CPU-package energy telemetry: add a RAPL domain argument,
+for example --rapl-domain /sys/class/powercap/intel-rapl:0, only if
+readable. The wrapper samples energy and accounts for a counter wrap.
+If unavailable, energy_joules remains null (not zero). The report
+does not export the raw local prompt or model path.
+
+The meter's tokens/sec metric INCLUDES loading the entire GGUF model
+from cold start. It is NOT steady-state inference throughput.
+Intel RAPL is only package energy, not whole-system electricity,
+Android battery discharge or phone idle power. These require separate
+measurements and controlled same-hardware baselines.
