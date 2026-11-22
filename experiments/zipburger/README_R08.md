@@ -119,3 +119,23 @@ the held-out accuracy gate **and** source-storage budget.
 The bounded 20B benchmark now compares rank 1 and rank 2 correction
 alongside no correction. This remains **tile training on Gaussian inputs**
 rather than real teacher-layer activation traces or full-model training.
+
+### R08B held-out results on actual GPT-OSS-20B weight fragments
+
+[GitHub Actions run 45063350559](https://github.com/Garyu-tt/DedupArc/actions/runs/45063350559)
+completed successfully with **13/13 CPU tests passing** and 18/18 real
+weight fragment evaluations. The validation vectors were still random
+Gaussian inputs, NOT captured model activations. Summary of relative
+output L2 errors over 18 slices:
+
+| Method | Mean | Min–max | Gate passes |
+|---|---:|---:|---:|
+| Plain 3-bit | 22.91% | 20.94–25.76% | 0/18 |
+| 3-bit + rank-1 FP16 correction | 21.29% | 15.52–25.17% | 0/18 |
+| 3-bit + rank-2 FP16 correction | 20.38% | 14.25–24.88% | 0/18 |
+
+A rank-2 correction serializes 221,040 B across all 18 samples versus
+235,008 B source and 180,576 B for uncorrected 3-bit, but **it is rejected
+for poor quality**. The chosen safe storage remains 226,386 B via exact
+lossless R04. The observed correction is far too weak to meet the 4%
+per-tile threshold. Do not interpret reduced mean L2 alone as agentic parity.
