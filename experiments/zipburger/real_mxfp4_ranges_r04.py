@@ -21,6 +21,7 @@ import zlib
 import numpy as np
 
 from .mxfp4_r03 import dense_reference_dot, load, pack
+from .mxfp4_palette_r04 import pack as pack_scale_bitpacked_r04
 
 REVISION = "41e8a94d15d62070b36cf4553a0250717ecf46b8"
 FILE = "gpt-oss-20b-MXFP4.gguf"
@@ -143,6 +144,19 @@ def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
     dot_ms = (time.perf_counter() - start) * 1000
     oracle = dense_reference_dot(blocks, scales, x)
     np.testing.assert_allclose(direct, oracle, rtol=1e-12, atol=1e-8)
+
+    # R04 never expands an entire floating-point tensor: only one 32-value
+    # MXFP4 block is decoded per direct GEMV step. Compare exact same bytes.
+    start = time.perf_counter()
+    palette = pack_scale_bitpacked_r04(blocks, scales)
+    palette_pack_ms = (time.perf_counter() - start) * 1000
+    bp, sp = palette.restore()
+    if not np.array_equal(bp, blocks) or not np.array_equal(sp, scales):
+        raise AssertionError("R04 failed exact GGUF scale/code restoration")
+    start = time.perf_counter()
+    palette_direct = palette.dot(x)
+    palette_direct_ms = (time.perf_counter() - start) * 1000
+    np.testing.assert_allclose(palette_direct, oracle, rtol=1e-12, atol=1e-8)
     return {
         "tensor": name, "row_start": row_start,
         "source_gguf_range": [first, last],
@@ -150,6 +164,18 @@ def benchmark(name, row_start=0, *, rows=48, groups=4, fetch=get_range):
         "raw_bytes": len(packed_gguf),
         "zipburger_r03_bytes": carrier.frame_bytes,
         "zipburger_mode": carrier.mode,
+        "zipburger_r04_bytes": palette.frame_bytes,
+        "zipburger_r04_mode": palette.mode,
+        "zipburger_r04_over_raw": round(palette.frame_bytes / len(packed_gguf), 4),
+        "zipburger_r04_pack_ms": round(palette_pack_ms, 3),
+        "zipburger_r04_direct_dot_ms": round(palette_direct_ms, 3),
+        "zipburger_r04_exact_packed_bits": True,
+        "zipburger_r04_float64_direct_dot_reference_match": True,
+        "scale_unique_values": int(np.unique(scales).size),
+        "scale_bytes": int(scales.nbytes),
+        "scale_zlib9_bytes": len(zlib.compress(scales.tobytes(), 9)),
+        "mantissa_bytes": int(blocks.nbytes),
+        "mantissa_zlib9_bytes": len(zlib.compress(blocks.tobytes(), 9)),
         "zlib9_bytes": len(zlib.compress(packed_gguf, 9)),
         "xz6_bytes": len(lzma.compress(packed_gguf, preset=6)),
         "zipburger_over_raw": round(carrier.frame_bytes / len(packed_gguf), 4),
