@@ -39,9 +39,15 @@ def report(calibration_trace, validation_trace, calibration_archive,
            validation_archive, *, min_samples=MIN_EXPERT_SAMPLES):
     if not 1 <= min_samples <= 256:
         raise ValueError("invalid per-expert minimum sample threshold")
-    cal, val = load_pair(calibration_archive, validation_archive)
+    cal, val, cal_meta, val_meta = load_pair(
+        calibration_archive, validation_archive, return_metadata=True)
     teacher = load_trace(calibration_trace)
     heldout = load_trace(validation_trace)
+    if (cal_meta["prompt_digest"] != teacher.prompt_digest or
+            val_meta["prompt_digest"] != heldout.prompt_digest or
+            cal_meta["checkpoint_digest"] != teacher.checkpoint_digest or
+            val_meta["checkpoint_digest"] != heldout.checkpoint_digest):
+        raise ValueError("activation archives and layer traces are not aligned")
     if teacher.source != "instrumented_teacher" or heldout.source != "instrumented_teacher":
         raise ValueError("routing coverage requires teacher capture provenance")
     if teacher.checkpoint_digest != heldout.checkpoint_digest:
@@ -77,8 +83,9 @@ def report(calibration_trace, validation_trace, calibration_archive,
             # Each router token dispatches to the expert once; one observed
             # activation row must be available for each routed occurrence
             # unless archive intentionally caps to <=256 examples.
-            if n_a > min(int(cal_counts[expert]), 256) or n_b > min(int(val_counts[expert]), 256):
-                raise ValueError("unexplained extra expert activation observations")
+            if (n_a != min(int(cal_counts[expert]), 256) or
+                    n_b != min(int(val_counts[expert]), 256)):
+                raise ValueError("incomplete/misaligned expert observations vs routing")
             if n_a >= min_samples and n_b >= min_samples:
                 row["experts_meeting_minimum"].append(expert)
                 total_covered += 1
