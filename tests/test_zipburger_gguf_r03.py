@@ -99,15 +99,15 @@ class GGUFProbeTests(unittest.TestCase):
                     pass
 
     def test_reject_tensor_offset_past_eof(self):
-        # The last 8 bytes of the second tensor header encode its data offset.
+        # Corrupt the offset of the MXFP4 tensor (not the non-MXFP4 control).
         data = bytearray(self.path.read_bytes())
-        needle = _string("blk.0.attn_norm.weight")
+        needle = _string("blk.0.ffn_gate_exps.weight")
         pos = data.index(needle) + len(needle) + 4 + 16 + 4
         data[pos:pos + 8] = struct.pack("<Q", 2 ** 40)
         self.path.write_bytes(data)
         with GGUFIndex(self.path) as index:
             with self.assertRaises(GGUFProbeError):
-                index.sample("blk.0.attn_norm.weight")
+                index.sample("blk.0.ffn_gate_exps.weight")
             # Header parser alone must not scan or load tensor payloads.
             self.assertEqual(len(index.tensors), 2)
 
