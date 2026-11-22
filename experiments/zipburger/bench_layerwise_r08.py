@@ -24,6 +24,13 @@ def benchmark_one(name, blocks, scales, *, row_start=0, real=False):
     selected, result = evaluate_expert(
         name, blocks, scales, calibration, validation,
         max_relative_l2=0.04, min_cosine=0.999, fallback_factory=lossless_pack)
+    from .residual_adapter_r08 import measure as measure_residual
+    # Compare a tiny learned encoder/decoder correction without assuming its
+    # per-tile gains transfer to the 20B model or real prompt activations.
+    _, r1 = measure_residual(blocks, scales, calibration, validation, rank=1)
+    _, r2 = measure_residual(blocks, scales, calibration, validation, rank=2)
+    result["rank1_fp16_adapter"] = r1
+    result["rank2_fp16_adapter"] = r2
     result.update({
         "sample_row_start": row_start,
         "sample_origin": "pinned_real_20b_GGUF" if real else "synthetic_MXFP4",
@@ -73,6 +80,10 @@ def main(argv=None):
         "candidate_3bit_bytes": sum(x["three_bit_bytes"] for x in items),
         "quality_gated_bytes": sum(x["stored_bytes_after_quality_gate"] for x in items),
         "quality_passes": sum(x["quality_gate_passed"] for x in items),
+        "rank1_adapter_passes": sum(x["rank1_fp16_adapter"]["accepted_after_quality_and_size_gate"] for x in items),
+        "rank2_adapter_passes": sum(x["rank2_fp16_adapter"]["accepted_after_quality_and_size_gate"] for x in items),
+        "rank1_adapter_aggregate_bytes": sum(x["rank1_fp16_adapter"]["corrected_bytes"] for x in items),
+        "rank2_adapter_aggregate_bytes": sum(x["rank2_fp16_adapter"]["corrected_bytes"] for x in items),
         "samples": len(items),
         "results": items,
     }
