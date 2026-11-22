@@ -31,4 +31,4 @@ jobs:
         env:
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
-        run: python -m experiments.zipburger.real_mxfp4_ranges_r04 --row-start 0
+        run: python -m experiments.zipburger.real_mxfp4_ranges_r04 --row-start 0 --row-start 4096 --rows 48 --groups 16
