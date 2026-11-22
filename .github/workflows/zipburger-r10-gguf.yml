@@ -50,8 +50,9 @@ jobs:
             -DLLAMA_CPP_ROOT="$PWD/_upstream_llama" \
             -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF
           cmake --build "$RUNNER_TEMP/zipburger-r10-build" \
-            --target zipburger_gguf_eval_r10 zipburger_gguf_r10_callback_test -j 2
+            --target zipburger_gguf_eval_r10 zipburger_gguf_r10_callback_test zipburger_gguf_r10_graph_compute_test -j 2
           "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_callback_test"
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_graph_compute_test"
           set +e
           "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10" 2> "$RUNNER_TEMP/r10_smoke.txt"
           rc=$?
