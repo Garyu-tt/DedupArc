@@ -13,6 +13,8 @@ on:
       - 'tests/test_zipburger_meter_r10.py'
       - 'experiments/zipburger/meter_r10.py'
       - 'experiments/zipburger/coverage_r12.py'
+      - 'experiments/zipburger/phone_budget_r12.py'
+      - 'tests/test_zipburger_phone_budget_r12.py'
       - 'experiments/zipburger/expert_trace_input_r09.py'
       - 'tests/test_zipburger_coverage_r12.py'
       - '.github/workflows/zipburger-r10-gguf.yml'
@@ -94,6 +96,8 @@ jobs:
           python -m unittest discover -s tests -p 'test_zipburger_meter_r10.py' -v
           python -m unittest discover -s tests -p 'test_zipburger_*r09.py' -v
           python -m unittest discover -s tests -p 'test_zipburger_coverage_r12.py' -v
+          python -m unittest discover -s tests -p 'test_zipburger_phone_budget_r12.py' -v
+          python -m experiments.zipburger.phone_budget_r12 --target-gb 8
 
       - name: Publish tested Linux x86-64 CPU probe only (NO model weights)
         uses: actions/upload-artifact@v4
