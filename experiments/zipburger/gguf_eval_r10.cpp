@@ -82,8 +82,12 @@ bool cb_eval(ggml_tensor * t, bool ask, void * data) {
         const bool is_ids = kind == Kind::topk;
         const int cols = kind == Kind::output || kind == Kind::input ? capture.hidden :
                          kind == Kind::topk || kind == Kind::weights ? kTopk : kExperts;
-        if (t->ne[0] != cols || t->ne[1] != capture.tokens ||
-            t->ne[2] != 1 || t->ne[3] != 1) {
+        const bool ok_shape = kind == Kind::weights ?
+            (t->ne[0] == 1 && t->ne[1] == kTopk &&
+             t->ne[2] == capture.tokens && t->ne[3] == 1) :
+            (t->ne[0] == cols && t->ne[1] == capture.tokens &&
+             t->ne[2] == 1 && t->ne[3] == 1);
+        if (!ok_shape) {
             throw std::runtime_error("unexpected tensor shape for " + std::string(t->name));
         }
         const size_t count = static_cast<size_t>(cols) * capture.tokens;
