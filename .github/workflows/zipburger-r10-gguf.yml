@@ -6,6 +6,7 @@ on:
       - 'experiment/zipburger-r08-layerwise-20b'
     paths:
       - 'experiments/zipburger/gguf_eval_r10.cpp'
+      - 'experiments/zipburger/gguf_eval_batch_r11.cpp'
       - 'experiments/zipburger/gguf_capture_r10.py'
       - 'experiments/zipburger/r10_native/**'
       - 'tests/test_zipburger_native_gguf_r10.py'
@@ -50,7 +51,7 @@ jobs:
             -DLLAMA_CPP_ROOT="$PWD/_upstream_llama" \
             -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF
           cmake --build "$RUNNER_TEMP/zipburger-r10-build" \
-            --target zipburger_gguf_eval_r10 zipburger_gguf_r10_callback_test zipburger_gguf_r10_graph_compute_test -j 2
+            --target zipburger_gguf_eval_r10 zipburger_gguf_batch_r11 zipburger_gguf_r10_callback_test zipburger_gguf_r10_graph_compute_test -j 2
           "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_callback_test"
           "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_r10_graph_compute_test"
           set +e
@@ -59,6 +60,12 @@ jobs:
           set -e
           test "$rc" -eq 2
           grep -q 'usage: gguf_eval_r10' "$RUNNER_TEMP/r10_smoke.txt"
+          set +e
+          "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_batch_r11" 2> "$RUNNER_TEMP/r11_smoke.txt"
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          grep -q 'usage: zipburger_gguf_batch_r11' "$RUNNER_TEMP/r11_smoke.txt"
       - name: Verify no runtime dependency on unbundled GGML/llama shared libraries
         run: |
           ldd "$RUNNER_TEMP/zipburger-r10-build/zipburger_gguf_eval_r10"             | tee "$RUNNER_TEMP/r10-ldd.txt"
@@ -69,6 +76,7 @@ jobs:
           (
             cd "$RUNNER_TEMP/zipburger-r10-build"
             sha256sum zipburger_gguf_eval_r10 > zipburger_gguf_eval_r10.sha256
+            sha256sum zipburger_gguf_batch_r11 > zipburger_gguf_batch_r11.sha256
           )
       - uses: actions/setup-python@v5
         with:
@@ -90,5 +98,7 @@ jobs:
           path: |
             ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10
             ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_eval_r10.sha256
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_batch_r11
+            ${{ runner.temp }}/zipburger-r10-build/zipburger_gguf_batch_r11.sha256
           if-no-files-found: error
           retention-days: 14
