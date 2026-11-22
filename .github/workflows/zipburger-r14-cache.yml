@@ -1,0 +1,46 @@
+name: ZipBurger R14 expert paging RAM and I/O simulation
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/zipburger/expert_cache_r14.py'
+      - 'tests/test_zipburger_expert_cache_r14.py'
+      - '.github/workflows/zipburger-r14-cache.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zipburger-r14-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-offline-r14:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26,<3'
+      - name: Validate deterministic LRU budget model
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: python -m unittest discover -s tests -p 'test_zipburger_expert_cache_r14.py' -v
+      - name: Generate clearly labeled synthetic 8GB and 10GB examples
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          python -m experiments.zipburger.expert_cache_r14 --target-gb 8 --reserve-runtime-gb 1 --synthetic-tokens 64 --output r14_synthetic_8gb.json
+          python -m experiments.zipburger.expert_cache_r14 --target-gb 10 --reserve-runtime-gb 1 --synthetic-tokens 64 --output r14_synthetic_10gb.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zipburger-r14-synthetic-cpu-paging
+          path: |
+            r14_synthetic_8gb.json
+            r14_synthetic_10gb.json
+          if-no-files-found: error
