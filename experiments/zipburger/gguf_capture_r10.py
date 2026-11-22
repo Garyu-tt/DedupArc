@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import struct
@@ -163,6 +164,19 @@ def save_bundle(paths, *, trace_path, checkpoint_sha256, source):
         raise ValueError("R10 output must be .npz")
     if not 512 <= trace.layers[0].shape[1]:
         raise ValueError("insufficient 512-dim expert input width")
+    # CLI is single-threaded; prevent cross-user access to token-correlated
+    # numerical traces and the prompt fingerprint metadata on shared hosts.
+    previous_mask = os.umask(0o077) if os.name == "posix" else None
+    try:
+        return _save_bundle_private(trace, router, experts, tokens, source_shas, output,
+                                    checkpoint_sha256, source)
+    finally:
+        if previous_mask is not None:
+            os.umask(previous_mask)
+
+
+def _save_bundle_private(trace, router, experts, tokens, source_shas, output,
+                         checkpoint_sha256, source):
     manifest = save(trace, output)
     router_path = output.with_name(output.stem + "_router_r10.npz")
     np.savez_compressed(router_path, **router)
