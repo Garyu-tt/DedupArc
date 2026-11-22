@@ -69,3 +69,39 @@ Any R13-based representation must eventually pass all of these:
 Without a real teacher trace and model-level candidate runtime,
 the experiment is not eligible for agentic/production acceptance.
 Keep ZipBurger PR #17 Draft until those gates are satisfied.
+
+## Measured public 20B results (2026-11-22)
+
+The full bounded [GitHub Actions R13 run 45069174115](https://github.com/Garyu-tt/DedupArc/actions/runs/45069174115)
+completed successfully and uploaded JSON for **36 real GGUF MXFP4
+expert tiles**, four aligned experts for each of nine tensors
+from layers 0..2, 470,016 source bytes overall.
+
+| Measurement across nine tensors | Result |
+|---|---:|
+| Aligned identical full 17-byte MXFP4 blocks | 0.00% |
+| Mean decoded pairwise expert cosine | 0.00109665 |
+| Mean shared expert rank-1 energy fraction | 31.28% |
+| Mean rank-2 energy fraction | 57.95% |
+| Best tested sample-only lossless compression | 452,940 / 470,016 bytes |
+| Best sample-only saving | 3.63% |
+| Independent zlib9 for each expert | 452,994 bytes |
+| Combined zlib9 across experts | 453,134 bytes |
+| XOR-to-first-expert + zlib9 | 462,160 bytes |
+
+**Interpretation:** a raw shared expert dictionary/XOR-delta is NOT
+promising on these sampled real weights. Exact MXFP4 block deduplication
+is zero, pairwise cosines are near zero, and XOR is worse than independent
+zlib. The rank-1 energy reflects the best possible *approximating*
+factor across four samples and is not a quality-passing trained decoder.
+
+These findings do NOT rule out nonlinear function-level distillation,
+specialized per-layer learned codecs or different unexamined experts.
+They do rule out claiming that the current simple expert dedup scheme
+will reach a phone-ready 20B. Do not extrapolate 3.63% from a tiny
+sampling window to the complete GGUF.
+
+The next meaningful experiment must test a qualitatively different
+compression mechanism with real activation traces (R11/R12) and
+end-to-end agentic quality gating; simply trying more XOR dictionaries
+would not solve the established bottleneck.
