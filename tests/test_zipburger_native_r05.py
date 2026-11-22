@@ -24,10 +24,13 @@ class NativeGEMV(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] /
                   "experiments/zipburger/native_r04.c")
         output = Path(cls.tmp.name) / "libzipburger_r04.so"
-        subprocess.run(["cc", "-O3", "-fPIC", "-shared",
-                        "-std=c11", "-Wall", "-Wextra", "-Werror",
-                        str(source), "-o", str(output), "-lm"],
-                       check=True, capture_output=True, text=True, timeout=30)
+        try:
+            subprocess.run(["cc", "-O3", "-fPIC", "-shared",
+                            "-std=c11", "-Wall", "-Wextra", "-Werror",
+                            str(source), "-o", str(output), "-lm"],
+                           check=True, capture_output=True, text=True, timeout=30)
+        except subprocess.CalledProcessError as exc:
+            raise AssertionError("native C11 build failed:\\n" + exc.stderr) from exc
         cls.lib = ctypes.CDLL(str(output))
         cls.fn = cls.lib.zipburger_r04_gemv
         cls.fn.argtypes = (
